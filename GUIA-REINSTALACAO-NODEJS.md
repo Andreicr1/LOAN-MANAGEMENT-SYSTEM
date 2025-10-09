@@ -19,8 +19,8 @@ Abra PowerShell como Administrador e execute:
 
 ```powershell
 # Limpar cache npm global
-Remove-Item -Recurse -Force "$env:APPDATA\npm" -ErrorAction SilentlyContinue
-Remove-Item -Recurse -Force "$env:APPDATA\npm-cache" -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force "$env:APPDATA\npm" -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force "$env:APPDATA\npm-cache" -ErrorAction SilentlyContinue
 
 # Limpar node_modules global (se existir)
 Remove-Item -Recurse -Force "$env:ProgramData\nvm" -ErrorAction SilentlyContinue
