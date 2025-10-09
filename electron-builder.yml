@@ -1,0 +1,34 @@
+appId: com.wmfcorp.loanmanagement
+productName: Loan Management System
+copyright: Copyright © 2025 WMF Corp
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - node_modules/**/*
+  - package.json
+
+extraResources:
+  - from: electron/database/schema.sql
+    to: database/schema.sql
+
+win:
+  target: portable
+  signAndEditExecutable: false
+
+nsis:
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  displayLanguageSelector: false
+  menuCategory: true
+  shortcutName: Loan Management System
+  uninstallDisplayName: Loan Management System
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+
+# Build script will generate version from package.json

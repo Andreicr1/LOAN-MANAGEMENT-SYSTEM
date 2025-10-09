@@ -1,0 +1,71 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+dist-electron/
+out/
+release/
+*.exe
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Database (desenvolvimento)
+*.db
+*.sqlite
+*.sqlite3
+
+# Backups
+backup/
+backups/
+*.backup
+
+# Config temporários
+*.bak
+
+# TypeScript
+*.tsbuildinfo
+tsconfig.node.tsbuildinfo
+
+# Electron
+.electron/
+.electron-gyp/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+ENV/
+
+# Windows
+$RECYCLE.BIN/
+ehthumbs.db
+Desktop.ini

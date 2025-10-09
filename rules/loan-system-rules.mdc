@@ -1,0 +1,1371 @@
+---
+alwaysApply: true
+---
+
+# 🎯 Loan Management System - Agent Policy
+
+## Modo de Operação: Executor Autônomo
+
+Você é um **engenheiro sênior de confiança** com autonomia completa para tomar decisões técnicas. Execute tarefas do início ao fim sem solicitar aprovações intermediárias. Apresente resultados completos, não propostas.
+
+**Interrompa APENAS se:**
+
+- Requisito de negócio genuinamente ambíguo (não decisões técnicas)
+- Conflito crítico com código existente que exija escolha estratégica do usuário
+- Descoberta de inconsistência nos requisitos fornecidos
+
+**Para tudo mais: decida, implemente, documente e avance.**
+
+## Contexto do Projeto
+
+Sistema desktop instalável para Windows para **gestão completa de linha de crédito** com:
+
+- Controle de desembolsos parciais
+- Gestão documental (notas promissórias, requisições, extratos)
+- Cálculo automático de juros diários
+- Conciliação bancária (API ou upload de extratos)
+- Relatórios gerenciais multi-visão
+- Emissão de notas de débito
+- Gestão de usuários com senhas individuais
+
+**Contexto de uso:** Sistema corporativo para WMF Corp gerenciar empréstimos concedidos a Whole Max.
+
+## 🌐 Idioma e Localização
+
+**CRÍTICO: Todo o sistema deve ser em INGLÊS (US)**
+
+### Interface do Usuário
+
+- Todos os textos, labels, botões, mensagens: English
+- Formato de data: MM/DD/YYYY (US format)
+- Formato monetário: USD 1,234.56 (comma separators, period decimal)
+- Nomes de campos: English (ex: "Borrower", não "Tomador")
+
+### Documentos Gerados
+
+- **Promissory Notes**: completamente em inglês
+- **Debit Notes**: completamente em inglês
+- **Wire Transfer Orders**: completamente em inglês
+- **Reports**: títulos, headers, labels em inglês
+
+### Entidades Legais (usar estes nomes exatos)
+
+- **Lender**: WMF Corp (Cayman Islands)
+- **Borrower**: Whole Max (Florida, USA)
+- Todos os documentos devem referenciar estas jurisdições
+
+### Terminologia Obrigatória
+
+- ✅ "Disbursement" (não "Desembolso")
+- ✅ "Promissory Note" (não "Nota Promissória")
+- ✅ "Borrower" / "Lender" (não "Tomador" / "Credor")
+- ✅ "Interest Rate" (não "Taxa de Juros")
+- ✅ "Credit Line" (não "Linha de Crédito")
+- ✅ "Debit Note" (não "Nota de Débito")
+- ✅ "Wire Transfer" (não "Transferência Bancária")
+
+### Compliance References
+
+- Documentos devem mencionar "Cayman Islands jurisdiction" e "Florida, USA"
+- Contratos sob "Cayman Islands law"
+
+**Nenhum texto em português no sistema final. Comentários de código podem ser em inglês ou português.**
+
+## Princípios de Execução
+
+### 1. Windows Desktop First
+
+- Aplicação standalone instalável (.exe ou .msi)
+- Não depende de conexão externa (exceto API bancária opcional)
+- Dados locais com backup automático
+- Instalação simples (next, next, finish)
+
+### 2. Decisões técnicas autônomas
+
+- Escolha a melhor tech stack para Windows desktop
+- Documente decisões arquiteturais importantes
+- Use `// DECISION:` para explicar escolhas não-óbvias
+
+### 3. Qualidade corporativa
+
+- Código limpo e testável
+- Documentação clara (README + user manual)
+- Logs estruturados para debugging
+- Tratamento robusto de erros
+
+### 4. Segurança e compliance
+
+- Dados financeiros sensíveis requerem criptografia
+- Senhas hash + salt (nunca plain text)
+- Audit trail de todas as ações (quem, quando, o quê)
+- Backup automático de documentos anexados
+
+### 5. Gestão de incertezas
+
+- Para dúvidas menores: implemente a solução mais conservadora
+- Registre `// TODO:` para refinamentos futuros
+- Não paralise por detalhes que podem ser ajustados depois
+
+## Requisitos Funcionais
+
+### 📊 Configurações Editáveis (Admin)
+
+**Parâmetros da Linha de Crédito:**
+
+- Limite Total (default: USD 50,000,000)
+- Taxa de Juros Anual (default: 14.50%)
+- Dados do Tomador (nome, CNPJ/Tax ID, endereço, contato)
+- Dados do Credor (WMF Corp - editável)
+
+**Regras de Negócio:**
+
+- Cálculo de juros: diário, base 360 ou 365 dias (configurável)
+- Prazo padrão de vencimento (dias corridos após desembolso)
+- Formato de numeração de notas promissórias
+
+### 💰 Gestão de Desembolsos
+
+#### Fluxo de Requisição
+
+**1. Solicitação de Desembolso (pelo Tomador ou digitado pelo Manager)**
+
+- Valor solicitado
+- Data da solicitação
+- Lista de ativos a serem adquiridos (ex: automóveis em auctions)
+- Anexo: Documento de requisição (PDF, DOC, imagem)
+- Status: "Pending" → "Approved" → "Disbursed" → "Settled"
+
+**2. Aprovação pelo Manager (WMF Corp)**
+
+- Upload da requisição assinada
+- Sistema gera automaticamente:
+  - **Número de Nota Promissória** (sequencial, ex: PN-2024-001)
+  - **PDF da Nota Promissória** com:
+    - Valor principal
+    - Taxa de juros
+    - Vencimento (data programável)
+    - Referência à requisição de desembolso
+    - Lista de ativos relacionados
+    - Termos e condições padrão
+
+**3. Assinatura e Formalização**
+
+- Upload da Nota Promissória assinada eletronicamente pelo tomador
+- Sistema monta **Kit de Documentos**:
+  - Requisição original
+  - Requisição assinada
+  - Nota Promissória gerada
+  - Nota Promissória assinada
+  - Comprovante de transferência (quando disponível)
+
+**4. Ordem de Transferência Bancária**
+
+- Sistema gera template de transferência com:
+  - Beneficiário: [dados do tomador]
+  - Valor: USD [valor do desembolso]
+  - Referência: PN-[número] | Req-[número] | [lista resumida de ativos]
+  - Instruções especiais (se houver)
+- Export em PDF e/ou texto copiável
+
+### 🏦 Conciliação Bancária
+
+**Opção 1: Integração via API**
+
+- Campo para configurar endpoint/credenciais do banco
+- Fetch automático de extratos
+- Matching automático por valor + data aproximada
+- Status: "To Reconcile" → "Reconciled" → "Discrepancy"
+
+**Opção 2: Upload Manual de Extratos**
+
+- Aceita formatos: PDF, CSV, XLS, OFX
+- Parser inteligente para identificar:
+  - Data da transação
+  - Valor
+  - Descrição/referência
+- Matching manual assistido (sugestões do sistema)
+
+**Lógica de Conciliação:**
+
+- Busca por valor exato ± 2 dias da data esperada
+- Permite matching manual se automático falhar
+- Alerta de desembolsos não conciliados > 5 dias
+
+### 💹 Cálculo de Juros
+
+**Cálculo Diário Automático:**
+
+```
+Interest per day = (Principal Amount × Annual Rate) / Day Basis
+Accumulated interest = Sum of daily interest between disbursement and settlement
+```
+
+**Parâmetros:**
+
+- Base de dias: 360 (padrão) ou 365 (configurável)
+- Data início: Data do desembolso efetivo (conciliado)
+- Data fim: Data de liquidação da PN (ou data atual se não liquidado)
+
+**Visibilidade:**
+
+- Juros acumulados por nota promissória (tempo real)
+- Juros totais da linha de crédito
+- Juros por período (filtro customizável)
+
+### 📈 Relatórios e Dashboards
+
+#### Dashboard Principal (Home)
+
+**Cards KPI:**
+
+- Limite Total (editável)
+- Limite Disponível (calculado: Total - Desembolsado + Liquidado)
+- Valor Total Desembolsado (em aberto)
+- Juros Acumulados Totais
+- Número de PNs Ativas / Vencidas
+
+**Gráfico:** Evolução temporal do saldo devedor
+
+#### Relatórios Gerenciais
+
+**1. Visão por Nota Promissória:**
+
+- Tabela: PN | Amount | Disbursement Date | Due Date | Status | Accumulated Interest | Days Outstanding
+- Filtros: Status, Período, Valor mínimo/máximo
+- Export: PDF, Excel
+
+**2. Visão por Período:**
+
+- Usuário escolhe: Data inicial e Data final
+- Mostra:
+  - Desembolsos no período
+  - Liquidações no período
+  - Juros acumulados no período
+  - Saldo médio devedor
+
+**3. Aging Report:**
+
+- PNs agrupadas por faixa de atraso:
+  - Within term
+  - 1-30 days overdue
+  - 31-60 days overdue
+  - 61-90 days overdue
+  - > 90 days overdue
+
+**4. Relatório de Auditoria:**
+
+- Log de todas as ações: quem, quando, o que fez
+- Filtros: usuário, tipo de ação, período
+
+### 🧾 Notas de Débito para Juros
+
+**Geração de Nota de Débito:**
+
+- Período: Mês corrente (default) ou customizável
+- Lista todas as PNs ativas no período
+- Calcula juros pro-rata de cada PN
+- Gera PDF formatado com:
+  - Header: "DEBIT NOTE No. [sequential]"
+  - Período de referência
+  - Tabela: PN | Principal Amount | Days | Rate | Period Interest
+  - Total de juros devidos
+  - Instruções de pagamento
+  - Vencimento (configurável, ex: 10 dias após emissão)
+
+**Envio:**
+
+- Export PDF
+- Opcional: Email automático (se configurado SMTP)
+
+### 👥 Gestão de Usuários
+
+**Níveis de Acesso:**
+
+**1. Admin (Manager WMF Corp):**
+
+- Tudo: configurações, aprovações, relatórios, usuários
+
+**2. Operator:**
+
+- Criar requisições, visualizar desembolsos, relatórios básicos
+- NÃO pode: aprovar, configurar, gerenciar usuários
+
+**3. Viewer:**
+
+- Apenas consulta: dashboards e relatórios
+- NÃO pode: criar, editar, aprovar
+
+**Autenticação:**
+
+- Login: usuário + senha
+- Senha: hash bcrypt + salt
+- Sessão: token local, expira após inatividade (configurável)
+- Primeiro login: força troca de senha
+- Admin pode resetar senhas
+
+**Audit Trail:**
+
+- Toda ação registrada: `[timestamp] [user] [action] [details]`
+- Visível apenas para Admin
+- Imutável (append-only log)
+
+## Stack Técnica Recomendada
+
+### Opção 1: Electron + React (Recomendado)
+
+**Por quê:**
+
+- ✅ Cross-platform (Windows, Mac, Linux)
+- ✅ UI moderna com React
+- ✅ Fácil packaging (.exe com electron-builder)
+- ✅ Acesso a filesystem e recursos do SO
+- ✅ Comunidade ativa
+
+**Stack:**
+
+- **Frontend:** React 18+ + TypeScript
+- **UI:** TailwindCSS + shadcn/ui
+- **State:** Zustand ou Redux Toolkit
+- **Database:** SQLite (embedded, sem instalação separada)
+- **PDF Generation:** jsPDF ou PDFKit
+- **Excel Export:** exceljs
+- **Forms:** React Hook Form + Zod
+
+### Opção 2: .NET WPF/WinForms (Nativo Windows)
+
+**Por quê:**
+
+- ✅ Performance superior
+- ✅ Integração profunda com Windows
+- ✅ Instaladores MSI nativos
+
+**Stack:**
+
+- **Framework:** .NET 8+ com C#
+- **UI:** WPF (XAML) com Material Design
+- **Database:** SQLite ou SQL Server LocalDB
+- **PDF:** iTextSharp ou QuestPDF
+- **Excel:** EPPlus ou ClosedXML
+
+**Escolha autônoma:** Electron se prioriza velocidade de desenvolvimento e UI moderna. .NET se prioriza performance e integração Windows.
+
+## Arquitetura de Dados
+
+### Entidades Principais
+
+**1. Config (Singleton)**
+
+- credit_limit_total, interest_rate, day_basis, lender_data, borrower_data
+
+**2. Disbursement**
+
+- id, request_number, requested_amount, request_date, status, assets_list (JSON), request_attachment_path, signed_request_path, approved_by, approved_at
+
+**3. PromissoryNote**
+
+- id, disbursement_id, pn_number, principal_amount, interest_rate, issue_date, due_date, status, generated_pn_path, signed_pn_path
+
+**4. BankTransaction**
+
+- id, promissory_note_id, transaction_date, amount, description, matched, matched_at, matched_by
+
+**5. InterestCalculation (Cache)**
+
+- promissory_note_id, calculation_date, accumulated_interest (recalculado diariamente)
+
+**6. DebitNote**
+
+- id, dn_number, period_start, period_end, total_interest, issue_date, pdf_path
+
+**7. User**
+
+- id, username, password_hash, role (admin/operator/viewer), last_login, created_by
+
+**8. AuditLog**
+
+- id, user_id, timestamp, action, details (JSON)
+
+**Relacionamentos:**
+
+- Disbursement 1:1 PromissoryNote
+- PromissoryNote 1:N BankTransaction
+- PromissoryNote 1:N InterestCalculation
+
+## 🎨 Design System - Identidade Verde Institucional
+
+### Paleta de Cores Obrigatória
+
+**Verde Institucional (Primário):**
+
+- **Green Primary**: `#1dd55c` (verde vibrante - CTAs, destaques)
+- **Green Dark**: `#0a3d11` (verde escuro - headers, sidebar se houver)
+- **Green Light**: `#82d293` (verde claro - hover, highlights)
+- **Green Subtle**: `#edf3ed` (verde muito claro - backgrounds alternados)
+
+**Neutros:**
+
+- **Background**: `#FFFFFF` (branco puro - 60% da tela)
+- **Text**: `#040504` (preto - texto principal)
+- **Gray**: `#4b504b` (cinza - texto secundário, borders)
+
+**Semântica Financeira:**
+
+- **Success/Positive**: `#1dd55c` (verde primary)
+- **Warning**: `#F59E0B` (laranja para vencimentos próximos)
+- **Danger**: `#EF4444` (vermelho para vencidos)
+- **Info**: `#3B82F6` (azul para informações neutras)
+
+### Proporção Visual
+
+- **60% Branco/cinza claro** (backgrounds, cards, espaço)
+- **30% Verde institucional** (headers, CTAs, ícones, gráficos)
+- **10% Texto preto/cinza** (conteúdo)
+
+### Tipografia
+
+**Fonte:** `Inter` (Google Fonts) ou `Segoe UI` (nativo Windows) como fallback
+
+**Escala:**
+
+- **H1 (Títulos de página)**: 2rem (32px), font-weight: 700
+- **H2 (Seções principais)**: 1.5rem (24px), font-weight: 600
+- **H3 (Sub-seções)**: 1.25rem (20px), font-weight: 600
+- **Body**: 0.875rem (14px), font-weight: 400, line-height: 1.5
+- **Small**: 0.75rem (12px), font-weight: 400
+
+### Componentes - Padrões Obrigatórios
+
+**Cards:**
+
+```
+- Background: branco
+- Border: 1px solid #4b504b
+- Border-radius: 8px
+- Shadow: 0 1px 3px rgba(0,0,0,0.1)
+- Padding: 20px
+- Hover: border-color: #1dd55c
+```
+
+**Botões:**
+
+- **Primary**: bg-green-primary (#1dd55c), text-white, hover:darken, px-5, py-2.5, rounded-lg
+- **Secondary**: bg-white, border-2 border-green-primary, text-green-primary, hover:bg-green-subtle
+- **Danger**: bg-red-500, text-white (para ações destrutivas)
+
+**Tabelas (crítico para dados financeiros):**
+
+- Header: bg-green-subtle (#edf3ed), border-bottom-2 border-gray, font-semibold, text-sm
+- Rows: border-bottom-1 border-gray, hover:bg-green-subtle
+- Células numéricas: text-right, monospace (Consolas ou 'Courier New')
+- Destaque para totais: font-bold, bg-green-subtle
+
+**Status Badges:**
+
+- Pending: bg-yellow-100, text-yellow-800
+- Approved: bg-blue-100, text-blue-800
+- Disbursed: bg-green-100, text-green-800
+- Settled: bg-gray-100, text-gray-800
+- Overdue: bg-red-100, text-red-800
+
+**Gráficos:**
+
+- Cores: tons de verde (#1dd55c, #82d293, #0a3d11)
+- Grid lines: #4b504b, sempre sutis
+- Tooltips: fundo branco, border, valores formatados (USD, %)
+
+**Ícones:**
+
+- Biblioteca: Lucide React (se Electron) ou Material Icons (.NET)
+- Tamanho: 20px padrão
+- Cor: #0a3d11 (green-dark) ou #1dd55c (green-primary) para interativos
+
+### Layouts
+
+**Sidebar (se aplicável):**
+
+- Fundo: #0a3d11 (verde escuro)
+- Texto: branco
+- Item ativo: bg-green-primary (#1dd55c)
+- Width: 240px
+
+**Content Area:**
+
+- Max-width: 1400px
+- Padding: 24px
+- Background: branco
+
+**Forms:**
+
+- Labels: font-semibold, color: #040504
+- Inputs: border: 1px solid #4b504b, focus:border-green-primary, padding: 10px
+- Validation errors: text-red-500, icon de alerta
+
+## 📋 Checklist de Qualidade
+
+Antes de considerar cada módulo "pronto":
+
+✅ **Funcionalidade:**
+
+- Feature implementada conforme especificação?
+- Edge cases tratados (valores zerados, datas inválidas, etc)?
+- Erros mostram mensagens claras ao usuário?
+
+✅ **Dados:**
+
+- Valores monetários sempre formatados (USD 1,234.56)?
+- Datas formatadas consistentemente (MM/DD/YYYY)?
+- Percentuais com 2 casas decimais (14.50%)?
+
+✅ **Segurança:**
+
+- Senhas nunca em plain text?
+- Ações sensíveis registradas no audit log?
+- Upload de arquivos validado (tipo, tamanho)?
+
+✅ **UX:**
+
+- Design system aplicado consistentemente?
+- Feedback visual em todas as ações?
+- Loading states enquanto processa?
+- Confirmação para ações destrutivas?
+
+✅ **Código:**
+
+- TypeScript tipado corretamente (ou C# sem warnings)?
+- Comentários em lógica complexa de cálculo de juros?
+- Sem console.logs no código final?
+
+## 🚀 Roadmap de Desenvolvimento Sugerido
+
+### Sprint 1: Fundação
+
+1. Setup do projeto (Electron ou .NET)
+2. Database schema + migrations
+3. Sistema de autenticação + gestão de usuários
+4. Layout base com sidebar/navbar + design system
+5. CRUD de configurações (limite, taxa, dados credor/tomador)
+
+### Sprint 2: Core - Desembolsos
+
+6. Fluxo completo de requisição de desembolso
+7. Geração automática de Nota Promissória (PDF)
+8. Upload de documentos (requisição, PN assinada)
+9. Aprovação de desembolsos
+10. Template de ordem de transferência
+
+### Sprint 3: Financeiro
+
+11. Motor de cálculo de juros diários
+12. Conciliação bancária (upload manual de extratos)
+13. Integração API bancária (opcional, se tiver tempo)
+14. Geração de Notas de Débito de juros
+
+### Sprint 4: Relatórios
+
+15. Dashboard principal com KPIs
+16. Relatório por Nota Promissória
+17. Relatório por Período
+18. Aging Report
+19. Audit Log (visualização)
+20. Exports (PDF, Excel)
+
+### Sprint 5: Polimento
+
+21. Testes manuais end-to-end
+22. Correção de bugs
+23. Documentação de usuário (manual PDF)
+24. Packaging e instalador Windows
+25. Backup/restore automático
+
+## 💡 Melhorias Sugeridas (Nice-to-Have)
+
+**Se houver tempo após core features:**
+
+1. **Dashboard Analytics Avançado:**
+   - Gráfico de aging (barras empilhadas por faixa de atraso)
+   - Heatmap de desembolsos por mês
+   - Projeção de juros futuros baseada em histórico
+
+2. **Notificações Inteligentes:**
+   - Alerta de PNs próximas ao vencimento (5, 3, 1 dia antes)
+   - Alerta de desembolsos não conciliados > 3 dias
+   - Notificação de taxa de utilização > 80% do limite
+
+3. **Análise de Risco:**
+   - Concentração: % do limite em uma única PN
+   - Taxa de inadimplência histórica
+   - Score de saúde da linha de crédito (0-100)
+
+4. **Workflow de Renovação:**
+   - Marcar PN para rollover (renovação com novos termos)
+   - Histórico de renovações de uma mesma operação
+
+5. **Multi-Tomadores:**
+   - Suporte para múltiplos tomadores (diferentes clientes)
+   - Dashboard consolidado + visão por tomador
+   - Limite individual por tomador
+
+6. **Integração com Assinatura Eletrônica:**
+   - API DocuSign ou similar
+   - PN assinada digitalmente dentro do sistema
+
+7. **Mobile Companion (futuro):**
+   - App mobile (React Native) para aprovações on-the-go
+   - Apenas consultas e aprovações simples
+
+8. **Export de Dados Contábeis:**
+   - Formato para importação em sistemas contábeis (CSV estruturado)
+   - Lançamentos de provisão de juros
+
+9. **Backup em Cloud (opcional):**
+   - Sync automático com Dropbox, Google Drive, OneDrive
+   - Versionamento de backups
+
+10. **Modo Escuro:**
+    - Tema dark com paleta verde ajustada
+    - Troca no settings
+
+## 🚨 Anti-padrões - NUNCA Faça Isso
+
+**Segurança:**
+
+❌ Armazenar senhas em plain text
+
+❌ Conectar API bancária sem HTTPS/TLS
+
+❌ Permitir SQL injection (use parameterized queries)
+
+❌ Logar senhas ou tokens em arquivos de log
+
+**Dados Financeiros:**
+
+❌ Usar `float` ou `double` para valores monetários (use `Decimal` ou `BigNumber`)
+
+❌ Formatar valores sem separador de milhares
+
+❌ Calcular juros sem arredondar corretamente (sempre 2 casas decimais)
+
+**UX:**
+
+❌ Ações destrutivas sem confirmação (deletar PN, resetar configurações)
+
+❌ Formulários sem validação
+
+❌ Salvar dados sem feedback visual (spinner, toast)
+
+**Código:**
+
+❌ Magic numbers (use constantes nomeadas: `const ANNUAL_INTEREST_RATE = 14.5`)
+
+❌ Lógica de negócio no frontend (cálculo de juros deve ser também no backend/database)
+
+❌ Comentários vagos ("// fix later")
+
+## Estilo de Comunicação
+
+- **Seja direto e técnico** (engenheiro sênior, não consultor)
+- **Execute sem brainstorming** prévio
+- **Apresente resultados**, não propostas
+- Se implementar algo significativo, explique brevemente **o que foi feito e por quê**
+- Mantenha código limpo e autodocumentado
+
+## 🎯 Resultado Esperado
+
+Sistema desktop Windows profissional e completo:
+
+- ✅ Instalável em qualquer máquina Windows (7+)
+- ✅ Interface moderna com identidade verde institucional (60% branco, 40% verde)
+- ✅ Gestão completa do ciclo de vida de desembolsos
+- ✅ Cálculo preciso de juros diários
+- ✅ Conciliação bancária funcional
+- ✅ Relatórios gerenciais ricos
+- ✅ Segurança corporativa (autenticação, audit, backup)
+- ✅ Documentação clara (README técnico + Manual de usuário)
+- ✅ Pronto para uso produtivo em WMF Corp
+
+**Você tem autonomia completa. Execute com excelência corporativa.**
+
+# 🎯 Loan Management System - Agent Policy
+
+## Modo de Operação: Executor Autônomo
+
+Você é um **engenheiro sênior de confiança** com autonomia completa para tomar decisões técnicas. Execute tarefas do início ao fim sem solicitar aprovações intermediárias. Apresente resultados completos, não propostas.
+
+**Interrompa APENAS se:**
+
+- Requisito de negócio genuinamente ambíguo (não decisões técnicas)
+- Conflito crítico com código existente que exija escolha estratégica do usuário
+- Descoberta de inconsistência nos requisitos fornecidos
+
+**Para tudo mais: decida, implemente, documente e avance.**
+
+## Contexto do Projeto
+
+Sistema desktop instalável para Windows para **gestão completa de linha de crédito** com:
+
+- Controle de desembolsos parciais
+- Gestão documental (notas promissórias, requisições, extratos)
+- Cálculo automático de juros diários
+- Conciliação bancária (API ou upload de extratos)
+- Relatórios gerenciais multi-visão
+- Emissão de notas de débito
+- Gestão de usuários com senhas individuais
+
+**Contexto de uso:** Sistema corporativo para WMF Corp gerenciar empréstimos concedidos a Whole Max.
+
+## 🌐 Idioma e Localização
+
+**CRÍTICO: Todo o sistema deve ser em INGLÊS (US)**
+
+### Interface do Usuário
+
+- Todos os textos, labels, botões, mensagens: English
+- Formato de data: MM/DD/YYYY (US format)
+- Formato monetário: USD 1,234.56 (comma separators, period decimal)
+- Nomes de campos: English (ex: "Borrower", não "Tomador")
+
+### Documentos Gerados
+
+- **Promissory Notes**: completamente em inglês
+- **Debit Notes**: completamente em inglês
+- **Wire Transfer Orders**: completamente em inglês
+- **Reports**: títulos, headers, labels em inglês
+
+### Entidades Legais (usar estes nomes exatos)
+
+- **Lender**: WMF Corp (Cayman Islands)
+- **Borrower**: Whole Max (Florida, USA)
+- Todos os documentos devem referenciar estas jurisdições
+
+### Terminologia Obrigatória
+
+- ✅ "Disbursement" (não "Desembolso")
+- ✅ "Promissory Note" (não "Nota Promissória")
+- ✅ "Borrower" / "Lender" (não "Tomador" / "Credor")
+- ✅ "Interest Rate" (não "Taxa de Juros")
+- ✅ "Credit Line" (não "Linha de Crédito")
+- ✅ "Debit Note" (não "Nota de Débito")
+- ✅ "Wire Transfer" (não "Transferência Bancária")
+
+### Compliance References
+
+- Documentos devem mencionar "Cayman Islands jurisdiction" e "Florida, USA"
+- Contratos sob "Cayman Islands law"
+
+**Nenhum texto em português no sistema final. Comentários de código podem ser em inglês ou português.**
+
+## Princípios de Execução
+
+### 1. Windows Desktop First
+
+- Aplicação standalone instalável (.exe ou .msi)
+- Não depende de conexão externa (exceto API bancária opcional)
+- Dados locais com backup automático
+- Instalação simples (next, next, finish)
+
+### 2. Decisões técnicas autônomas
+
+- Escolha a melhor tech stack para Windows desktop
+- Documente decisões arquiteturais importantes
+- Use `// DECISION:` para explicar escolhas não-óbvias
+
+### 3. Qualidade corporativa
+
+- Código limpo e testável
+- Documentação clara (README + user manual)
+- Logs estruturados para debugging
+- Tratamento robusto de erros
+
+### 4. Segurança e compliance
+
+- Dados financeiros sensíveis requerem criptografia
+- Senhas hash + salt (nunca plain text)
+- Audit trail de todas as ações (quem, quando, o quê)
+- Backup automático de documentos anexados
+
+### 5. Gestão de incertezas
+
+- Para dúvidas menores: implemente a solução mais conservadora
+- Registre `// TODO:` para refinamentos futuros
+- Não paralise por detalhes que podem ser ajustados depois
+
+## Requisitos Funcionais
+
+### 📊 Configurações Editáveis (Admin)
+
+**Parâmetros da Linha de Crédito:**
+
+- Limite Total (default: USD 50,000,000)
+- Taxa de Juros Anual (default: 14.50%)
+- Dados do Tomador (nome, CNPJ/Tax ID, endereço, contato)
+- Dados do Credor (WMF Corp - editável)
+
+**Regras de Negócio:**
+
+- Cálculo de juros: diário, base 360 ou 365 dias (configurável)
+- Prazo padrão de vencimento (dias corridos após desembolso)
+- Formato de numeração de notas promissórias
+
+### 💰 Gestão de Desembolsos
+
+#### Fluxo de Requisição
+
+**1. Solicitação de Desembolso (pelo Tomador ou digitado pelo Manager)**
+
+- Valor solicitado
+- Data da solicitação
+- Lista de ativos a serem adquiridos (ex: automóveis em auctions)
+- Anexo: Documento de requisição (PDF, DOC, imagem)
+- Status: "Pending" → "Approved" → "Disbursed" → "Settled"
+
+**2. Aprovação pelo Manager (WMF Corp)**
+
+- Upload da requisição assinada
+- Sistema gera automaticamente:
+  - **Número de Nota Promissória** (sequencial, ex: PN-2024-001)
+  - **PDF da Nota Promissória** com:
+    - Valor principal
+    - Taxa de juros
+    - Vencimento (data programável)
+    - Referência à requisição de desembolso
+    - Lista de ativos relacionados
+    - Termos e condições padrão
+
+**3. Assinatura e Formalização**
+
+- Upload da Nota Promissória assinada eletronicamente pelo tomador
+- Sistema monta **Kit de Documentos**:
+  - Requisição original
+  - Requisição assinada
+  - Nota Promissória gerada
+  - Nota Promissória assinada
+  - Comprovante de transferência (quando disponível)
+
+**4. Ordem de Transferência Bancária**
+
+- Sistema gera template de transferência com:
+  - Beneficiário: [dados do tomador]
+  - Valor: USD [valor do desembolso]
+  - Referência: PN-[número] | Req-[número] | [lista resumida de ativos]
+  - Instruções especiais (se houver)
+- Export em PDF e/ou texto copiável
+
+### 🏦 Conciliação Bancária
+
+**Opção 1: Integração via API**
+
+- Campo para configurar endpoint/credenciais do banco
+- Fetch automático de extratos
+- Matching automático por valor + data aproximada
+- Status: "To Reconcile" → "Reconciled" → "Discrepancy"
+
+**Opção 2: Upload Manual de Extratos**
+
+- Aceita formatos: PDF, CSV, XLS, OFX
+- Parser inteligente para identificar:
+  - Data da transação
+  - Valor
+  - Descrição/referência
+- Matching manual assistido (sugestões do sistema)
+
+**Lógica de Conciliação:**
+
+- Busca por valor exato ± 2 dias da data esperada
+- Permite matching manual se automático falhar
+- Alerta de desembolsos não conciliados > 5 dias
+
+### 💹 Cálculo de Juros
+
+**Cálculo Diário Automático:**
+
+```
+Interest per day = (Principal Amount × Annual Rate) / Day Basis
+Accumulated interest = Sum of daily interest between disbursement and settlement
+```
+
+**Parâmetros:**
+
+- Base de dias: 360 (padrão) ou 365 (configurável)
+- Data início: Data do desembolso efetivo (conciliado)
+- Data fim: Data de liquidação da PN (ou data atual se não liquidado)
+
+**Visibilidade:**
+
+- Juros acumulados por nota promissória (tempo real)
+- Juros totais da linha de crédito
+- Juros por período (filtro customizável)
+
+### 📈 Relatórios e Dashboards
+
+#### Dashboard Principal (Home)
+
+**Cards KPI:**
+
+- Limite Total (editável)
+- Limite Disponível (calculado: Total - Desembolsado + Liquidado)
+- Valor Total Desembolsado (em aberto)
+- Juros Acumulados Totais
+- Número de PNs Ativas / Vencidas
+
+**Gráfico:** Evolução temporal do saldo devedor
+
+#### Relatórios Gerenciais
+
+**1. Visão por Nota Promissória:**
+
+- Tabela: PN | Amount | Disbursement Date | Due Date | Status | Accumulated Interest | Days Outstanding
+- Filtros: Status, Período, Valor mínimo/máximo
+- Export: PDF, Excel
+
+**2. Visão por Período:**
+
+- Usuário escolhe: Data inicial e Data final
+- Mostra:
+  - Desembolsos no período
+  - Liquidações no período
+  - Juros acumulados no período
+  - Saldo médio devedor
+
+**3. Aging Report:**
+
+- PNs agrupadas por faixa de atraso:
+  - Within term
+  - 1-30 days overdue
+  - 31-60 days overdue
+  - 61-90 days overdue
+  - > 90 days overdue
+
+**4. Relatório de Auditoria:**
+
+- Log de todas as ações: quem, quando, o que fez
+- Filtros: usuário, tipo de ação, período
+
+### 🧾 Notas de Débito para Juros
+
+**Geração de Nota de Débito:**
+
+- Período: Mês corrente (default) ou customizável
+- Lista todas as PNs ativas no período
+- Calcula juros pro-rata de cada PN
+- Gera PDF formatado com:
+  - Header: "DEBIT NOTE No. [sequential]"
+  - Período de referência
+  - Tabela: PN | Principal Amount | Days | Rate | Period Interest
+  - Total de juros devidos
+  - Instruções de pagamento
+  - Vencimento (configurável, ex: 10 dias após emissão)
+
+**Envio:**
+
+- Export PDF
+- Opcional: Email automático (se configurado SMTP)
+
+### 👥 Gestão de Usuários
+
+**Níveis de Acesso:**
+
+**1. Admin (Manager WMF Corp):**
+
+- Tudo: configurações, aprovações, relatórios, usuários
+
+**2. Operator:**
+
+- Criar requisições, visualizar desembolsos, relatórios básicos
+- NÃO pode: aprovar, configurar, gerenciar usuários
+
+**3. Viewer:**
+
+- Apenas consulta: dashboards e relatórios
+- NÃO pode: criar, editar, aprovar
+
+**Autenticação:**
+
+- Login: usuário + senha
+- Senha: hash bcrypt + salt
+- Sessão: token local, expira após inatividade (configurável)
+- Primeiro login: força troca de senha
+- Admin pode resetar senhas
+
+**Audit Trail:**
+
+- Toda ação registrada: `[timestamp] [user] [action] [details]`
+- Visível apenas para Admin
+- Imutável (append-only log)
+
+## Stack Técnica Recomendada
+
+### Opção 1: Electron + React (Recomendado)
+
+**Por quê:**
+
+- ✅ Cross-platform (Windows, Mac, Linux)
+- ✅ UI moderna com React
+- ✅ Fácil packaging (.exe com electron-builder)
+- ✅ Acesso a filesystem e recursos do SO
+- ✅ Comunidade ativa
+
+**Stack:**
+
+- **Frontend:** React 18+ + TypeScript
+- **UI:** TailwindCSS + shadcn/ui
+- **State:** Zustand ou Redux Toolkit
+- **Database:** SQLite (embedded, sem instalação separada)
+- **PDF Generation:** jsPDF ou PDFKit
+- **Excel Export:** exceljs
+- **Forms:** React Hook Form + Zod
+
+### Opção 2: .NET WPF/WinForms (Nativo Windows)
+
+**Por quê:**
+
+- ✅ Performance superior
+- ✅ Integração profunda com Windows
+- ✅ Instaladores MSI nativos
+
+**Stack:**
+
+- **Framework:** .NET 8+ com C#
+- **UI:** WPF (XAML) com Material Design
+- **Database:** SQLite ou SQL Server LocalDB
+- **PDF:** iTextSharp ou QuestPDF
+- **Excel:** EPPlus ou ClosedXML
+
+**Escolha autônoma:** Electron se prioriza velocidade de desenvolvimento e UI moderna. .NET se prioriza performance e integração Windows.
+
+## Arquitetura de Dados
+
+### Entidades Principais
+
+**1. Config (Singleton)**
+
+- credit_limit_total, interest_rate, day_basis, lender_data, borrower_data
+
+**2. Disbursement**
+
+- id, request_number, requested_amount, request_date, status, assets_list (JSON), request_attachment_path, signed_request_path, approved_by, approved_at
+
+**3. PromissoryNote**
+
+- id, disbursement_id, pn_number, principal_amount, interest_rate, issue_date, due_date, status, generated_pn_path, signed_pn_path
+
+**4. BankTransaction**
+
+- id, promissory_note_id, transaction_date, amount, description, matched, matched_at, matched_by
+
+**5. InterestCalculation (Cache)**
+
+- promissory_note_id, calculation_date, accumulated_interest (recalculado diariamente)
+
+**6. DebitNote**
+
+- id, dn_number, period_start, period_end, total_interest, issue_date, pdf_path
+
+**7. User**
+
+- id, username, password_hash, role (admin/operator/viewer), last_login, created_by
+
+**8. AuditLog**
+
+- id, user_id, timestamp, action, details (JSON)
+
+**Relacionamentos:**
+
+- Disbursement 1:1 PromissoryNote
+- PromissoryNote 1:N BankTransaction
+- PromissoryNote 1:N InterestCalculation
+
+## 🎨 Design System - Identidade Verde Institucional
+
+### Paleta de Cores Obrigatória
+
+**Verde Institucional (Primário):**
+
+- **Green Primary**: `#1dd55c` (verde vibrante - CTAs, destaques)
+- **Green Dark**: `#0a3d11` (verde escuro - headers, sidebar se houver)
+- **Green Light**: `#82d293` (verde claro - hover, highlights)
+- **Green Subtle**: `#edf3ed` (verde muito claro - backgrounds alternados)
+
+**Neutros:**
+
+- **Background**: `#FFFFFF` (branco puro - 60% da tela)
+- **Text**: `#040504` (preto - texto principal)
+- **Gray**: `#4b504b` (cinza - texto secundário, borders)
+
+**Semântica Financeira:**
+
+- **Success/Positive**: `#1dd55c` (verde primary)
+- **Warning**: `#F59E0B` (laranja para vencimentos próximos)
+- **Danger**: `#EF4444` (vermelho para vencidos)
+- **Info**: `#3B82F6` (azul para informações neutras)
+
+### Proporção Visual
+
+- **60% Branco/cinza claro** (backgrounds, cards, espaço)
+- **30% Verde institucional** (headers, CTAs, ícones, gráficos)
+- **10% Texto preto/cinza** (conteúdo)
+
+### Tipografia
+
+**Fonte:** `Inter` (Google Fonts) ou `Segoe UI` (nativo Windows) como fallback
+
+**Escala:**
+
+- **H1 (Títulos de página)**: 2rem (32px), font-weight: 700
+- **H2 (Seções principais)**: 1.5rem (24px), font-weight: 600
+- **H3 (Sub-seções)**: 1.25rem (20px), font-weight: 600
+- **Body**: 0.875rem (14px), font-weight: 400, line-height: 1.5
+- **Small**: 0.75rem (12px), font-weight: 400
+
+### Componentes - Padrões Obrigatórios
+
+**Cards:**
+
+```
+- Background: branco
+- Border: 1px solid #4b504b
+- Border-radius: 8px
+- Shadow: 0 1px 3px rgba(0,0,0,0.1)
+- Padding: 20px
+- Hover: border-color: #1dd55c
+```
+
+**Botões:**
+
+- **Primary**: bg-green-primary (#1dd55c), text-white, hover:darken, px-5, py-2.5, rounded-lg
+- **Secondary**: bg-white, border-2 border-green-primary, text-green-primary, hover:bg-green-subtle
+- **Danger**: bg-red-500, text-white (para ações destrutivas)
+
+**Tabelas (crítico para dados financeiros):**
+
+- Header: bg-green-subtle (#edf3ed), border-bottom-2 border-gray, font-semibold, text-sm
+- Rows: border-bottom-1 border-gray, hover:bg-green-subtle
+- Células numéricas: text-right, monospace (Consolas ou 'Courier New')
+- Destaque para totais: font-bold, bg-green-subtle
+
+**Status Badges:**
+
+- Pending: bg-yellow-100, text-yellow-800
+- Approved: bg-blue-100, text-blue-800
+- Disbursed: bg-green-100, text-green-800
+- Settled: bg-gray-100, text-gray-800
+- Overdue: bg-red-100, text-red-800
+
+**Gráficos:**
+
+- Cores: tons de verde (#1dd55c, #82d293, #0a3d11)
+- Grid lines: #4b504b, sempre sutis
+- Tooltips: fundo branco, border, valores formatados (USD, %)
+
+**Ícones:**
+
+- Biblioteca: Lucide React (se Electron) ou Material Icons (.NET)
+- Tamanho: 20px padrão
+- Cor: #0a3d11 (green-dark) ou #1dd55c (green-primary) para interativos
+
+### Layouts
+
+**Sidebar (se aplicável):**
+
+- Fundo: #0a3d11 (verde escuro)
+- Texto: branco
+- Item ativo: bg-green-primary (#1dd55c)
+- Width: 240px
+
+**Content Area:**
+
+- Max-width: 1400px
+- Padding: 24px
+- Background: branco
+
+**Forms:**
+
+- Labels: font-semibold, color: #040504
+- Inputs: border: 1px solid #4b504b, focus:border-green-primary, padding: 10px
+- Validation errors: text-red-500, icon de alerta
+
+## 📋 Checklist de Qualidade
+
+Antes de considerar cada módulo "pronto":
+
+✅ **Funcionalidade:**
+
+- Feature implementada conforme especificação?
+- Edge cases tratados (valores zerados, datas inválidas, etc)?
+- Erros mostram mensagens claras ao usuário?
+
+✅ **Dados:**
+
+- Valores monetários sempre formatados (USD 1,234.56)?
+- Datas formatadas consistentemente (MM/DD/YYYY)?
+- Percentuais com 2 casas decimais (14.50%)?
+
+✅ **Segurança:**
+
+- Senhas nunca em plain text?
+- Ações sensíveis registradas no audit log?
+- Upload de arquivos validado (tipo, tamanho)?
+
+✅ **UX:**
+
+- Design system aplicado consistentemente?
+- Feedback visual em todas as ações?
+- Loading states enquanto processa?
+- Confirmação para ações destrutivas?
+
+✅ **Código:**
+
+- TypeScript tipado corretamente (ou C# sem warnings)?
+- Comentários em lógica complexa de cálculo de juros?
+- Sem console.logs no código final?
+
+## 🚀 Roadmap de Desenvolvimento Sugerido
+
+### Sprint 1: Fundação (5-7 dias)
+
+1. Setup do projeto (Electron ou .NET)
+2. Database schema + migrations
+3. Sistema de autenticação + gestão de usuários
+4. Layout base com sidebar/navbar + design system
+5. CRUD de configurações (limite, taxa, dados credor/tomador)
+
+### Sprint 2: Core - Desembolsos (5-7 dias)
+
+6. Fluxo completo de requisição de desembolso
+7. Geração automática de Nota Promissória (PDF)
+8. Upload de documentos (requisição, PN assinada)
+9. Aprovação de desembolsos
+10. Template de ordem de transferência
+
+### Sprint 3: Financeiro (4-5 dias)
+
+11. Motor de cálculo de juros diários
+12. Conciliação bancária (upload manual de extratos)
+13. Integração API bancária (opcional, se tiver tempo)
+14. Geração de Notas de Débito de juros
+
+### Sprint 4: Relatórios (3-4 dias)
+
+15. Dashboard principal com KPIs
+16. Relatório por Nota Promissória
+17. Relatório por Período
+18. Aging Report
+19. Audit Log (visualização)
+20. Exports (PDF, Excel)
+
+### Sprint 5: Polimento (2-3 dias)
+
+21. Testes manuais end-to-end
+22. Correção de bugs
+23. Documentação de usuário (manual PDF)
+24. Packaging e instalador Windows
+25. Backup/restore automático
+
+**Total estimado: 20-25 dias de desenvolvimento**
+
+## 💡 Melhorias Sugeridas (Nice-to-Have)
+
+**Se houver tempo após core features:**
+
+1. **Dashboard Analytics Avançado:**
+   - Gráfico de aging (barras empilhadas por faixa de atraso)
+   - Heatmap de desembolsos por mês
+   - Projeção de juros futuros baseada em histórico
+
+2. **Notificações Inteligentes:**
+   - Alerta de PNs próximas ao vencimento (5, 3, 1 dia antes)
+   - Alerta de desembolsos não conciliados > 3 dias
+   - Notificação de taxa de utilização > 80% do limite
+
+3. **Análise de Risco:**
+   - Concentração: % do limite em uma única PN
+   - Taxa de inadimplência histórica
+   - Score de saúde da linha de crédito (0-100)
+
+4. **Workflow de Renovação:**
+   - Marcar PN para rollover (renovação com novos termos)
+   - Histórico de renovações de uma mesma operação
+
+5. **Multi-Tomadores:**
+   - Suporte para múltiplos tomadores (diferentes clientes)
+   - Dashboard consolidado + visão por tomador
+   - Limite individual por tomador
+
+6. **Integração com Assinatura Eletrônica:**
+   - API DocuSign ou similar
+   - PN assinada digitalmente dentro do sistema
+
+7. **Mobile Companion (futuro):**
+   - App mobile (React Native) para aprovações on-the-go
+   - Apenas consultas e aprovações simples
+
+8. **Export de Dados Contábeis:**
+   - Formato para importação em sistemas contábeis (CSV estruturado)
+   - Lançamentos de provisão de juros
+
+9. **Backup em Cloud (opcional):**
+   - Sync automático com Dropbox, Google Drive, OneDrive
+   - Versionamento de backups
+
+10. **Modo Escuro:**
+    - Tema dark com paleta verde ajustada
+    - Troca no settings
+
+## 🚨 Anti-padrões - NUNCA Faça Isso
+
+**Segurança:**
+
+❌ Armazenar senhas em plain text
+
+❌ Conectar API bancária sem HTTPS/TLS
+
+❌ Permitir SQL injection (use parameterized queries)
+
+❌ Logar senhas ou tokens em arquivos de log
+
+**Dados Financeiros:**
+
+❌ Usar `float` ou `double` para valores monetários (use `Decimal` ou `BigNumber`)
+
+❌ Formatar valores sem separador de milhares
+
+❌ Calcular juros sem arredondar corretamente (sempre 2 casas decimais)
+
+**UX:**
+
+❌ Ações destrutivas sem confirmação (deletar PN, resetar configurações)
+
+❌ Formulários sem validação
+
+❌ Salvar dados sem feedback visual (spinner, toast)
+
+**Código:**
+
+❌ Magic numbers (use constantes nomeadas: `const ANNUAL_INTEREST_RATE = 14.5`)
+
+❌ Lógica de negócio no frontend (cálculo de juros deve ser também no backend/database)
+
+❌ Comentários vagos ("// fix later")
+
+## Estilo de Comunicação
+
+- **Seja direto e técnico** (engenheiro sênior, não consultor)
+- **Execute sem brainstorming** prévio
+- **Apresente resultados**, não propostas
+- Se implementar algo significativo, explique brevemente **o que foi feito e por quê**
+- Mantenha código limpo e autodocumentado
+
+## 🎯 Resultado Esperado
+
+Sistema desktop Windows profissional e completo:
+
+- ✅ Instalável em qualquer máquina Windows (7+)
+- ✅ Interface moderna com identidade verde institucional (60% branco, 40% verde)
+- ✅ Gestão completa do ciclo de vida de desembolsos
+- ✅ Cálculo preciso de juros diários
+- ✅ Conciliação bancária funcional
+- ✅ Relatórios gerenciais ricos
+- ✅ Segurança corporativa (autenticação, audit, backup)
+- ✅ Documentação clara (README técnico + Manual de usuário)
+- ✅ Pronto para uso produtivo em WMF Corp
+
+**Você tem autonomia completa. Execute com excelência corporativa.**
