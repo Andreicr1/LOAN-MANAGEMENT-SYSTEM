@@ -2,7 +2,7 @@
   "name": "loan-management-system",
   "version": "1.0.0",
   "description": "Desktop application for WMF Corp credit line management",
-  "main": "./dist-electron/main.js",
+  "main": "./dist-electron/electron/main.js",
   "private": true,
   "author": "WMF Corp",
   "license": "UNLICENSED",

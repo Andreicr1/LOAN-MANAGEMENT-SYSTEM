@@ -150,6 +150,9 @@ export class PromissoryNoteService {
     signedPnPath?: string
     settlementDate?: string
     settlementAmount?: number
+    envelopeId?: string
+    signatureStatus?: string
+    signatureDate?: string
   }): { success: boolean, error?: string } {
     try {
       const updates: string[] = []
@@ -174,6 +177,18 @@ export class PromissoryNoteService {
       if (data.settlementAmount !== undefined) {
         updates.push('settlement_amount = ?')
         params.push(data.settlementAmount)
+      }
+      if (data.envelopeId !== undefined) {
+        updates.push('envelope_id = ?')
+        params.push(data.envelopeId)
+      }
+      if (data.signatureStatus !== undefined) {
+        updates.push('signature_status = ?')
+        params.push(data.signatureStatus)
+      }
+      if (data.signatureDate !== undefined) {
+        updates.push('signature_date = ?')
+        params.push(data.signatureDate)
       }
 
       if (updates.length === 0) {

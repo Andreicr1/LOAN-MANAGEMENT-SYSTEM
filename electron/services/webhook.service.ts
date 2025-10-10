@@ -4,10 +4,12 @@ import { Server } from 'http'
 import { DocuSignService } from './docusign.service'
 import { EmailService } from './email.service'
 import { DisbursementService } from './disbursement.service'
+import type { Disbursement } from './disbursement.service'
 import { PromissoryNoteService } from './promissory-note.service'
 import { app as electronApp } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
+import { PDFService } from './pdf.service'
 
 export interface WebhookConfig {
   port: number
@@ -24,7 +26,8 @@ export class WebhookService {
     private docuSignService: DocuSignService,
     private emailService: EmailService,
     private disbursementService: DisbursementService,
-    private promissoryNoteService: PromissoryNoteService
+    private promissoryNoteService: PromissoryNoteService,
+    private pdfService: PDFService
   ) {
     this.app = express()
     this.setupMiddleware()
@@ -137,7 +140,7 @@ export class WebhookService {
             await this.emailService.sendSignatureConfirmation(
               signatory.email,
               'PN',
-              disbursement.disbursement_number,
+              disbursement.requestNumber,
               signatory.name,
               new Date(completedDate).toLocaleDateString()
             )
@@ -185,7 +188,7 @@ export class WebhookService {
         await this.disbursementService.updateDisbursement(disbursementId, {
           wireTransferSignedPath: signedPath,
           wireTransferSignatureDate: completedDate,
-          wireTransferStatus: 'completed'
+          wireTransferSignatureStatus: 'completed'
         })
 
         // Get disbursement info
@@ -198,7 +201,7 @@ export class WebhookService {
             await this.emailService.sendSignatureConfirmation(
               signatory.email,
               'WT',
-              disbursement.disbursement_number,
+              disbursement.requestNumber,
               signatory.name,
               new Date(completedDate).toLocaleDateString()
             )
@@ -211,9 +214,9 @@ export class WebhookService {
           await this.emailService.sendWireTransferToBank(
             config.bankEmail,
             signedPath,
-            disbursement.disbursement_number,
-            `$${disbursement.total_loan_amount.toLocaleString()}`,
-            disbursement.borrower_name
+            disbursement.requestNumber,
+            `$${disbursement.requestedAmount.toLocaleString()}`,
+            disbursement.clientName || 'Borrower'
           )
 
           // Update status
@@ -235,13 +238,17 @@ export class WebhookService {
       if (!disbursement) return
 
       // Generate Wire Transfer if not exists
-      let wtPath = disbursement.wire_transfer_path
+      let wtPath = disbursement.wireTransferPath
       if (!wtPath) {
-        const result = await this.disbursementService.generateWireTransferOrder(disbursementId)
-        if (!result.success || !result.filePath) {
-          throw new Error('Failed to generate Wire Transfer')
+        const generatedPath = await this.generateWireTransferDocument(disbursement)
+        if (!generatedPath) {
+          console.warn('Wire transfer document is not available for disbursement', disbursementId)
+          return
         }
-        wtPath = result.filePath
+        wtPath = generatedPath
+        await this.disbursementService.updateDisbursement(disbursementId, {
+          wireTransferPath: generatedPath
+        })
       }
 
       // Send for signature via DocuSign
@@ -250,14 +257,14 @@ export class WebhookService {
       
       const envelopeId = await this.docuSignService.sendForSignature({
         documentPath: wtPath,
-        documentName: `Wire Transfer Order - ${disbursement.disbursement_number}`,
+        documentName: `Wire Transfer Order - ${disbursement.requestNumber}`,
         signers: signatories.map((s: any, index: number) => ({
           email: s.email,
           name: s.name,
           recipientId: (index + 1).toString(),
           routingOrder: '1'
         })),
-        subject: `Wire Transfer Order - ${disbursement.disbursement_number}`,
+        subject: `Wire Transfer Order - ${disbursement.requestNumber}`,
         message: 'Please sign the attached Wire Transfer Order to authorize the fund transfer.',
         webhookUrl: config?.webhookUrl
       })
@@ -265,7 +272,7 @@ export class WebhookService {
       // Update disbursement with envelope ID
       await this.disbursementService.updateDisbursement(disbursementId, {
         wireTransferEnvelopeId: envelopeId,
-        wireTransferStatus: 'sent'
+        wireTransferSignatureStatus: 'sent'
       })
 
       // Send email notifications
@@ -295,6 +302,32 @@ export class WebhookService {
     // This would get system configuration
     // For now, returning a placeholder
     return null
+  }
+
+  private async generateWireTransferDocument(disbursement: Disbursement): Promise<string | null> {
+    try {
+      const promissoryNote = await this.promissoryNoteService.getByDisbursementId(disbursement.id)
+      if (!promissoryNote) {
+        return null
+      }
+
+      const filePath = await this.pdfService.generateWireTransferOrder({
+        pnNumber: promissoryNote.pnNumber,
+        requestNumber: disbursement.requestNumber,
+        amount: disbursement.requestedAmount,
+        beneficiary: {
+          name: disbursement.clientName || 'Borrower',
+          address: ''
+        },
+        assetsList: disbursement.assetsList,
+        reference: `Disbursement ${disbursement.requestNumber}`
+      })
+
+      return filePath
+    } catch (error) {
+      console.error('Failed to generate wire transfer document:', error)
+      return null
+    }
   }
 
   async start(config: WebhookConfig): Promise<void> {

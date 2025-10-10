@@ -35,8 +35,8 @@ export class EmailService {
 
   async initialize(config: EmailConfig): Promise<void> {
     this.config = config
-    
-    this.transporter = nodemailer.createTransporter({
+
+    const transporter = nodemailer.createTransport({
       host: config.host,
       port: config.port,
       secure: config.secure,
@@ -48,7 +48,8 @@ export class EmailService {
 
     // Verify connection
     try {
-      await this.transporter.verify()
+      await transporter.verify()
+      this.transporter = transporter
       console.log('Email service ready')
     } catch (error) {
       console.error('Email service verification failed:', error)

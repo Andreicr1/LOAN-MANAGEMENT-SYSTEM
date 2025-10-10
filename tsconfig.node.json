@@ -13,7 +13,7 @@
     "forceConsistentCasingInFileNames": true,
     "outDir": "./dist-electron"
   },
-  "include": ["vite.config.ts", "electron", "electron/**/*.ts"],
+  "include": ["vite.config.ts", "electron", "electron/**/*.ts", "types/**/*.d.ts"],
   "exclude": ["node_modules", "dist", "dist-electron"]
 }
 

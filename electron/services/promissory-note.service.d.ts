@@ -43,6 +43,9 @@ export declare class PromissoryNoteService {
         signedPnPath?: string;
         settlementDate?: string;
         settlementAmount?: number;
+        envelopeId?: string;
+        signatureStatus?: string;
+        signatureDate?: string;
     }): {
         success: boolean;
         error?: string;
