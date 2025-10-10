@@ -42,6 +42,12 @@ export declare class DisbursementService {
         assetsList?: string[];
         description?: string;
         status?: string;
+        wireTransferPath?: string;
+        wireTransferEnvelopeId?: string;
+        wireTransferSignatureStatus?: string;
+        wireTransferSignatureDate?: string;
+        wireTransferSignedPath?: string;
+        bankEmailSentDate?: string;
     }): {
         success: boolean;
         error?: string;

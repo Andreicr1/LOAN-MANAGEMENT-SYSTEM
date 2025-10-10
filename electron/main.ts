@@ -100,13 +100,13 @@ function initializeServices() {
   eSignatureService = new ESignatureService()
   docuSignService = new DocuSignService()
   emailService = new EmailService()
-  webhookService = new WebhookService(docuSignService, emailService, disbursementService, promissoryNoteService)
+  webhookService = new WebhookService(docuSignService, emailService, disbursementService, promissoryNoteService, pdfService)
   interestService = new InterestService(db)
   bankReconciliationService = new BankReconciliationService(db)
   debitNoteService = new DebitNoteService(db)
   reportsService = new ReportsService(db)
   backupService = new BackupService(dbPath)
-  clientService = new ClientService(db)
+  clientService = new ClientService(db.getDatabase())
 
   // Calculate interests daily
   interestService.calculateAllActiveInterests()

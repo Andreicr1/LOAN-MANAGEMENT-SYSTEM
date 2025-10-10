@@ -149,6 +149,12 @@ export class DisbursementService {
     assetsList?: string[]
     description?: string
     status?: string
+    wireTransferPath?: string
+    wireTransferEnvelopeId?: string
+    wireTransferSignatureStatus?: string
+    wireTransferSignatureDate?: string
+    wireTransferSignedPath?: string
+    bankEmailSentDate?: string
   }): { success: boolean, error?: string } {
     try {
       const updates: string[] = []
@@ -173,6 +179,30 @@ export class DisbursementService {
       if (data.status !== undefined) {
         updates.push('status = ?')
         params.push(data.status)
+      }
+      if (data.wireTransferPath !== undefined) {
+        updates.push('wire_transfer_path = ?')
+        params.push(data.wireTransferPath)
+      }
+      if (data.wireTransferEnvelopeId !== undefined) {
+        updates.push('wire_transfer_envelope_id = ?')
+        params.push(data.wireTransferEnvelopeId)
+      }
+      if (data.wireTransferSignatureStatus !== undefined) {
+        updates.push('wire_transfer_signature_status = ?')
+        params.push(data.wireTransferSignatureStatus)
+      }
+      if (data.wireTransferSignatureDate !== undefined) {
+        updates.push('wire_transfer_signature_date = ?')
+        params.push(data.wireTransferSignatureDate)
+      }
+      if (data.wireTransferSignedPath !== undefined) {
+        updates.push('wire_transfer_signed_path = ?')
+        params.push(data.wireTransferSignedPath)
+      }
+      if (data.bankEmailSentDate !== undefined) {
+        updates.push('bank_email_sent_date = ?')
+        params.push(data.bankEmailSentDate)
       }
 
       if (updates.length === 0) {
@@ -270,6 +300,12 @@ export class DisbursementService {
       description: row.description,
       requestAttachmentPath: row.request_attachment_path,
       signedRequestPath: row.signed_request_path,
+      wireTransferPath: row.wire_transfer_path,
+      wireTransferEnvelopeId: row.wire_transfer_envelope_id,
+      wireTransferSignatureStatus: row.wire_transfer_signature_status,
+      wireTransferSignatureDate: row.wire_transfer_signature_date,
+      wireTransferSignedPath: row.wire_transfer_signed_path,
+      bankEmailSentDate: row.bank_email_sent_date,
       approvedBy: row.approved_by,
       approvedAt: row.approved_at,
       approverName: row.approver_name,
