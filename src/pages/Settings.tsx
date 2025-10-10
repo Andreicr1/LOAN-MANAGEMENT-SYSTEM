@@ -55,6 +55,40 @@ export const Settings: React.FC = () => {
   const [backups, setBackups] = useState<any[]>([])
   const [showBackups, setShowBackups] = useState(false)
 
+  // Helper functions to safely update nested config properties
+  const updateDocusign = (field: keyof NonNullable<Config['docusign']>, value: any) => {
+    if (!config) return;
+    
+    setConfig({
+      ...config,
+      docusign: {
+        integrationKey: config.docusign?.integrationKey || '',
+        accountId: config.docusign?.accountId || '',
+        webhookUrl: config.docusign?.webhookUrl || '',
+        webhookSecret: config.docusign?.webhookSecret || '',
+        environment: config.docusign?.environment || 'demo',
+        [field]: value
+      }
+    })
+  }
+
+  const updateEmail = (field: keyof NonNullable<Config['email']>, value: any) => {
+    if (!config) return;
+    
+    setConfig({
+      ...config,
+      email: {
+        host: config.email?.host || 'smtp.gmail.com',
+        port: config.email?.port || 587,
+        secure: config.email?.secure || false,
+        user: config.email?.user || 'operations@wmf-corp.com',
+        pass: config.email?.pass || '',
+        bankEmail: config.email?.bankEmail || '',
+        [field]: value
+      }
+    })
+  }
+
   useEffect(() => {
     loadConfig()
     loadBackups()
@@ -536,30 +570,21 @@ export const Settings: React.FC = () => {
               label="Integration Key"
               type="password"
               value={config.docusign?.integrationKey || ''}
-              onChange={(e) => setConfig({
-                ...config,
-                docusign: { ...config.docusign, integrationKey: e.target.value }
-              })}
+              onChange={(e) => updateDocusign('integrationKey', e.target.value)}
               placeholder="Enter DocuSign Integration Key"
             />
 
             <Input
               label="Account ID"
               value={config.docusign?.accountId || ''}
-              onChange={(e) => setConfig({
-                ...config,
-                docusign: { ...config.docusign, accountId: e.target.value }
-              })}
+              onChange={(e) => updateDocusign('accountId', e.target.value)}
               placeholder="Enter DocuSign Account ID"
             />
 
             <Input
               label="Webhook URL"
               value={config.docusign?.webhookUrl || ''}
-              onChange={(e) => setConfig({
-                ...config,
-                docusign: { ...config.docusign, webhookUrl: e.target.value }
-              })}
+              onChange={(e) => updateDocusign('webhookUrl', e.target.value)}
               placeholder="https://yourdomain.com/webhook/docusign"
             />
 
@@ -567,10 +592,7 @@ export const Settings: React.FC = () => {
               label="Webhook Secret"
               type="password"
               value={config.docusign?.webhookSecret || ''}
-              onChange={(e) => setConfig({
-                ...config,
-                docusign: { ...config.docusign, webhookSecret: e.target.value }
-              })}
+              onChange={(e) => updateDocusign('webhookSecret', e.target.value)}
               placeholder="Enter Webhook Secret"
             />
 
@@ -580,10 +602,7 @@ export const Settings: React.FC = () => {
               </label>
               <select
                 value={config.docusign?.environment || 'demo'}
-                onChange={(e) => setConfig({
-                  ...config,
-                  docusign: { ...config.docusign, environment: e.target.value as 'demo' | 'production' }
-                })}
+                onChange={(e) => updateDocusign('environment', e.target.value as 'demo' | 'production')}
                 className="w-full px-3 py-2.5 text-sm border border-border-gray rounded-md focus:outline-none focus:ring-2 focus:ring-green-primary"
                 aria-label="DocuSign environment selection"
               >
@@ -605,49 +624,34 @@ export const Settings: React.FC = () => {
             <Input
               label="SMTP Host"
               value={config.email?.host || 'smtp.gmail.com'}
-              onChange={(e) => setConfig({
-                ...config,
-                email: { ...config.email, host: e.target.value }
-              })}
+              onChange={(e) => updateEmail('host', e.target.value)}
             />
 
             <Input
               label="SMTP Port"
               type="number"
               value={config.email?.port || 587}
-              onChange={(e) => setConfig({
-                ...config,
-                email: { ...config.email, port: parseInt(e.target.value) }
-              })}
+              onChange={(e) => updateEmail('port', parseInt(e.target.value))}
             />
 
             <Input
               label="Email User"
               value={config.email?.user || 'operations@wmf-corp.com'}
-              onChange={(e) => setConfig({
-                ...config,
-                email: { ...config.email, user: e.target.value }
-              })}
+              onChange={(e) => updateEmail('user', e.target.value)}
             />
 
             <Input
               label="Email Password"
               type="password"
               value={config.email?.pass || ''}
-              onChange={(e) => setConfig({
-                ...config,
-                email: { ...config.email, pass: e.target.value }
-              })}
+              onChange={(e) => updateEmail('pass', e.target.value)}
               placeholder="Enter email password"
             />
 
             <Input
               label="Bank Email Address"
               value={config.email?.bankEmail || ''}
-              onChange={(e) => setConfig({
-                ...config,
-                email: { ...config.email, bankEmail: e.target.value }
-              })}
+              onChange={(e) => updateEmail('bankEmail', e.target.value)}
               placeholder="bank@example.com"
             />
 
@@ -656,10 +660,7 @@ export const Settings: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={config.email?.secure || false}
-                  onChange={(e) => setConfig({
-                    ...config,
-                    email: { ...config.email, secure: e.target.checked }
-                  })}
+                  onChange={(e) => updateEmail('secure', e.target.checked)}
                   className="mr-2"
                 />
                 <span className="text-sm font-medium">Use SSL/TLS</span>

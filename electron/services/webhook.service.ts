@@ -1,5 +1,5 @@
-import * as express from 'express'
-import * as bodyParser from 'body-parser'
+import express from 'express'
+import bodyParser from 'body-parser'
 import { Server } from 'http'
 import { DocuSignService } from './docusign.service'
 import { EmailService } from './email.service'
@@ -26,16 +26,14 @@ export class WebhookService {
     private disbursementService: DisbursementService,
     private promissoryNoteService: PromissoryNoteService
   ) {
-    const expressApp = express as any
-    this.app = expressApp()
+    this.app = express()
     this.setupMiddleware()
     this.setupRoutes()
   }
 
   private setupMiddleware(): void {
     // Parse raw body for signature verification
-    const bodyParserModule = bodyParser as any
-    this.app.use(bodyParserModule.raw({ type: 'application/json' }))
+    this.app.use(bodyParser.raw({ type: 'application/json' }))
   }
 
   private setupRoutes(): void {

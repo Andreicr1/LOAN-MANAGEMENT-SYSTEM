@@ -25,7 +25,16 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           const result = await window.electronAPI.auth.login(username, password)
           
           if (result.success && result.user) {
-            set({ user: result.user, isAuthenticated: true })
+            set({ 
+              user: {
+                id: result.user.id,
+                username: result.user.username,
+                role: result.user.role as 'admin' | 'operator' | 'viewer',
+                fullName: result.user.fullName,
+                mustChangePassword: result.user.mustChangePassword
+              }, 
+              isAuthenticated: true 
+            })
             
             // Log audit
             await window.electronAPI.audit.log(result.user.id, 'USER_LOGIN', {

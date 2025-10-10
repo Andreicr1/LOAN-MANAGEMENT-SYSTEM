@@ -1,4 +1,5 @@
-import Database from 'better-sqlite3'
+import type DatabaseNS from 'better-sqlite3'
+const Database = require('better-sqlite3') as typeof import('better-sqlite3')
 
 export interface Client {
   id?: number
@@ -17,7 +18,7 @@ export interface Client {
 }
 
 export class ClientService {
-  constructor(private db: Database.Database) {}
+  constructor(private db: DatabaseNS.Database) {}
 
   getAllClients() {
     const stmt = this.db.prepare(`

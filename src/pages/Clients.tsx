@@ -148,7 +148,7 @@ export const Clients: React.FC = () => {
         loadClients()
         
         await window.electronAPI.audit.log(currentUser!.id, editingClient ? 'CLIENT_UPDATED' : 'CLIENT_CREATED', {
-          clientId: editingClient?.id || result.clientId,
+          clientId: editingClient?.id || (result as any).clientId || 'new',
           clientName: formData.name
         })
       } else {

@@ -12,7 +12,14 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "npx vite preview",
     "electron:build": "npm run build && npx electron-builder --win portable --x64 --config.electronVersion=28.1.0",
-    "clean": "rimraf dist dist-electron release"
+    "clean": "rimraf dist dist-electron release out",
+    "forge:start": "electron-forge start",
+    "forge:package": "npm run build && electron-forge package",
+    "forge:make": "npm run build && electron-forge make",
+    "forge:build": "npm run build && npm run forge:compile && npm run forge:make",
+    "forge:compile": "npx tsc electron/main.ts electron/preload.ts --outDir dist-electron --module commonjs --target es2019 --esModuleInterop --skipLibCheck",
+    "check:types": "tsc --noEmit",
+    "postinstall": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.3",
@@ -39,6 +46,10 @@
     "zustand": "^4.4.7"
   },
   "devDependencies": {
+    "@electron-forge/cli": "^7.10.0",
+    "@electron-forge/maker-squirrel": "^7.10.0",
+    "@electron-forge/maker-zip": "^7.10.0",
+    "@electron-forge/plugin-vite": "^7.2.0",
     "@types/babel__core": "^7.20.5",
     "@types/babel__generator": "^7.27.0",
     "@types/babel__template": "^7.4.4",
@@ -62,6 +73,7 @@
     "eslint": "^8.56.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "fs-extra": "^11.3.2",
     "postcss": "^8.4.32",
     "rimraf": "^5.0.5",
     "tailwindcss": "^3.4.18",
@@ -77,6 +89,11 @@
     "directories": {
       "output": "release"
     },
+    "asar": true,
+    "asarUnpack": [
+      "**/*.node"
+    ],
+    "npmRebuild": true,
     "files": [
       "dist/**/*",
       "dist-electron/**/*"

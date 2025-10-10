@@ -1,9 +1,10 @@
-import Database from 'better-sqlite3'
+import type DatabaseNS from 'better-sqlite3'
+const Database = require('better-sqlite3') as typeof import('better-sqlite3')
 import fs from 'fs'
 import path from 'path'
 
 export class DatabaseService {
-  private db: Database.Database
+  private db: DatabaseNS.Database
 
   constructor(dbPath: string) {
     // Ensure directory exists
@@ -105,7 +106,7 @@ export class DatabaseService {
     `
   }
 
-  getDatabase(): Database.Database {
+  getDatabase(): DatabaseNS.Database {
     return this.db
   }
 
