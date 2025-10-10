@@ -317,7 +317,7 @@ export class WebhookService {
         amount: disbursement.requestedAmount,
         beneficiary: {
           name: disbursement.clientName || 'Borrower',
-          address: ''
+          address: disbursement.clientAddress || 'N/A'
         },
         assetsList: disbursement.assetsList,
         reference: `Disbursement ${disbursement.requestNumber}`
