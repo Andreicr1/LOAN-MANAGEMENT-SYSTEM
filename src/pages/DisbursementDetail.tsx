@@ -51,9 +51,19 @@ export const DisbursementDetail: React.FC = () => {
       ])
       
       console.log('Loaded data:', { disbData, pnData, configData })
+      console.log('PN Data details:', {
+        id: pnData?.id,
+        pn_number: pnData?.pn_number,
+        generated_pn_path: pnData?.generated_pn_path,
+        signed_pn_path: pnData?.signed_pn_path,
+        signature_status: pnData?.signature_status
+      })
       setDisbursement(disbData)
       setPromissoryNote(pnData)
       setConfig(configData)
+      
+      // Force re-render check
+      console.log('Should show Send to Sign button?', !!(pnData?.generated_pn_path && !pnData?.signed_pn_path))
     } catch (error) {
       console.error('Failed to load data:', error)
     } finally {
@@ -155,30 +165,15 @@ export const DisbursementDetail: React.FC = () => {
         disbursementId: disbursement.id,
       })
 
-      // Send for signature via DocuSign
-      console.log('Sending PN for DocuSign signature...')
+      alert(`Promissory Note ${createResult.pnNumber} generated successfully!\n\nThe page will now refresh.`)
       
-      const signatories = disbursement.signatories ? JSON.parse(disbursement.signatories) : []
+      // Force reload to ensure fresh data
+      await loadData()
       
-      if (signatories.length > 0) {
-        const sendResult = await window.electronAPI.docusign.sendPromissoryNoteForSignature({
-          promissoryNoteId: createResult.promissoryNoteId,
-          pdfPath: pdfPath,
-          pnNumber: createResult.pnNumber,
-          disbursementNumber: disbursement.requestNumber,
-          signatories: signatories
-        })
-        
-        if (sendResult.success) {
-          alert(`Promissory Note ${createResult.pnNumber} generated and sent for signature!`)
-        } else {
-          alert(`Promissory Note ${createResult.pnNumber} generated successfully!\n\nNote: Failed to send for signature: ${sendResult.error}`)
-        }
-      } else {
-        alert(`Promissory Note ${createResult.pnNumber} generated successfully!\n\nNote: No signatories configured for automatic signature.`)
-      }
-      
-      loadData()
+      // Double-check: reload again after a short delay
+      setTimeout(() => {
+        loadData()
+      }, 500)
     } catch (error: any) {
       console.error('Failed to generate PN:', error)
       const errorMessage = error?.message || 'Failed to generate Promissory Note'
@@ -241,15 +236,68 @@ export const DisbursementDetail: React.FC = () => {
     }
   }
 
+  const sendPNForSignature = async () => {
+    if (!disbursement || !promissoryNote) return
+
+    const pdfPath = promissoryNote.generated_pn_path || promissoryNote.generatedPnPath
+    
+    if (!pdfPath) {
+      alert('Please generate the Promissory Note first')
+      return
+    }
+
+    if (promissoryNote.signature_status === 'sent' || promissoryNote.signature_status === 'completed') {
+      alert('This Promissory Note has already been sent for signature')
+      return
+    }
+
+    const signatories = disbursement.signatories ? JSON.parse(disbursement.signatories) : []
+    
+    if (signatories.length === 0) {
+      alert('No signatories configured for this client. Please add signatories in the Clients page.')
+      return
+    }
+
+    if (!confirm(`Send Promissory Note ${promissoryNote.pn_number} for signature to ${signatories.length} signator${signatories.length > 1 ? 'ies' : 'y'}?`)) {
+      return
+    }
+
+    try {
+      const sendResult = await window.electronAPI.docusign.sendPromissoryNoteForSignature({
+        promissoryNoteId: promissoryNote.id,
+        pdfPath: pdfPath,
+        pnNumber: promissoryNote.pn_number,
+        disbursementNumber: disbursement.requestNumber,
+        signatories: signatories
+      })
+      
+      if (sendResult.success) {
+        await window.electronAPI.audit.log(currentUser!.id, 'PROMISSORY_NOTE_SENT_FOR_SIGNATURE', {
+          pnNumber: promissoryNote.pn_number,
+          disbursementId: disbursement.id,
+        })
+        alert(`Promissory Note ${promissoryNote.pn_number} sent for signature successfully!`)
+        loadData()
+      } else {
+        alert(`Failed to send for signature: ${sendResult.error}`)
+      }
+    } catch (error: any) {
+      console.error('Failed to send PN for signature:', error)
+      alert('Failed to send for signature')
+    }
+  }
+
   const openGeneratedPN = async () => {
-    if (promissoryNote?.generated_pn_path) {
-      await window.electronAPI.openPDF(promissoryNote.generated_pn_path)
+    const pdfPath = promissoryNote?.generated_pn_path || promissoryNote?.generatedPnPath
+    if (pdfPath) {
+      await window.electronAPI.openPDF(pdfPath)
     }
   }
 
   const openSignedPN = async () => {
-    if (promissoryNote?.signed_pn_path) {
-      await window.electronAPI.openPDF(promissoryNote.signed_pn_path)
+    const pdfPath = promissoryNote?.signed_pn_path || promissoryNote?.signedPnPath
+    if (pdfPath) {
+      await window.electronAPI.openPDF(pdfPath)
     }
   }
 
@@ -437,17 +485,67 @@ export const DisbursementDetail: React.FC = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Promissory Note</CardTitle>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={generateWireTransfer}
-                disabled={!promissoryNote.signed_pn_path}
-              >
-                Generate Wire Transfer Order
-              </Button>
+              <div className="flex gap-2">
+                {(promissoryNote.generated_pn_path || promissoryNote.generatedPnPath) && 
+                 !(promissoryNote.signed_pn_path || promissoryNote.signedPnPath) && (
+                  <button
+                    onClick={sendPNForSignature}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#16a34a',
+                      color: 'white',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      borderRadius: '6px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#15803d'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#16a34a'}
+                  >
+                    Send to Sign
+                  </button>
+                )}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={generateWireTransfer}
+                  disabled={!(promissoryNote.signed_pn_path || promissoryNote.signedPnPath)}
+                >
+                  Generate Wire Transfer Order
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
+            {/* If PN exists but PDF not generated, show generate button */}
+            {!(promissoryNote.generated_pn_path || promissoryNote.generatedPnPath) && 
+             !(promissoryNote.signed_pn_path || promissoryNote.signedPnPath) && (
+              <div className="mb-6 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg text-center">
+                <p className="text-sm text-yellow-800 font-medium mb-3">
+                  ⚠️ Promissory Note record exists but PDF not generated yet
+                </p>
+                <button
+                  onClick={generatePromissoryNote}
+                  disabled={generatingPN}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#16a34a',
+                    color: 'white',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    borderRadius: '6px',
+                    border: 'none',
+                    cursor: generatingPN ? 'not-allowed' : 'pointer',
+                    opacity: generatingPN ? 0.6 : 1
+                  }}
+                >
+                  {generatingPN ? 'Generating...' : 'Generate PDF Now'}
+                </button>
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div>
                 <p className="text-sm font-semibold text-text-primary">PN Number:</p>
@@ -483,7 +581,7 @@ export const DisbursementDetail: React.FC = () => {
             <div className="pt-4 border-t border-border-gray">
               <p className="text-sm font-semibold text-text-primary mb-3">Documents:</p>
               <div className="flex flex-wrap gap-2">
-                {promissoryNote.generated_pn_path && (
+                {(promissoryNote.generated_pn_path || promissoryNote.generatedPnPath) && (
                   <Button
                     variant="secondary"
                     size="sm"
@@ -492,7 +590,28 @@ export const DisbursementDetail: React.FC = () => {
                     View Generated PN
                   </Button>
                 )}
-                {promissoryNote.signed_pn_path && (
+                {(promissoryNote.generated_pn_path || promissoryNote.generatedPnPath) && 
+                 !(promissoryNote.signed_pn_path || promissoryNote.signedPnPath) && (
+                  <button
+                    onClick={sendPNForSignature}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#16a34a',
+                      color: 'white',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      borderRadius: '6px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#15803d'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#16a34a'}
+                  >
+                    Send to Sign
+                  </button>
+                )}
+                {(promissoryNote.signed_pn_path || promissoryNote.signedPnPath) && (
                   <Button
                     variant="secondary"
                     size="sm"
@@ -501,14 +620,15 @@ export const DisbursementDetail: React.FC = () => {
                     View Signed PN
                   </Button>
                 )}
-                {!promissoryNote.generated_pn_path && !promissoryNote.signed_pn_path && (
+                {!(promissoryNote.generated_pn_path || promissoryNote.generatedPnPath) && 
+                 !(promissoryNote.signed_pn_path || promissoryNote.signedPnPath) && (
                   <p className="text-sm text-text-secondary">No documents available yet</p>
                 )}
               </div>
             </div>
 
             {/* Wire Transfer Status */}
-            {!promissoryNote.signed_pn_path && (
+            {!(promissoryNote.signed_pn_path || promissoryNote.signedPnPath) && (
               <div className="mt-4 pt-4 border-t border-border-gray">
                 <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <p className="text-sm text-yellow-800 font-medium">
@@ -525,7 +645,7 @@ export const DisbursementDetail: React.FC = () => {
       )}
 
       {/* Upload Signed PN */}
-      {promissoryNote && !promissoryNote.signed_pn_path && (
+      {promissoryNote && !(promissoryNote.signed_pn_path || promissoryNote.signedPnPath) && (
         <Card className="border-green-primary/50">
           <CardHeader>
             <CardTitle>Upload Signed Promissory Note</CardTitle>
@@ -533,7 +653,7 @@ export const DisbursementDetail: React.FC = () => {
           <CardContent>
             <div className="space-y-4">
               <p className="text-sm text-text-secondary">
-                Upload the Promissory Note with certified electronic signature from Whole Max.
+                Upload the Promissory Note with certified electronic signature.
                 The system will validate the digital signature before allowing Wire Transfer generation.
               </p>
 

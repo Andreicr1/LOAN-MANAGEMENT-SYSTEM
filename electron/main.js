@@ -78,7 +78,7 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'));
   }
 
   mainWindow.on('closed', () => {
@@ -387,6 +387,10 @@ ipcMain.handle('reports:getTopPNs', async (_, limit) => {
 
 ipcMain.handle('reports:getAcquiredAssets', async () => {
   return reportsService?.getAcquiredAssets();
+});
+
+ipcMain.handle('reports:getClientPNs', async (_, clientId) => {
+  return reportsService?.getClientPNs(clientId);
 });
 
 // Backup

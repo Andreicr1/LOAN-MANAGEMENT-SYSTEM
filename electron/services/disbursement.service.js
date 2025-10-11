@@ -146,4 +146,4 @@ var DisbursementService = /** @class */ (function () {
     };
     return DisbursementService;
 }());
-export { DisbursementService };
+module.exports = { DisbursementService };

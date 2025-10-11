@@ -34,9 +34,9 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import fs from 'fs';
-import path from 'path';
-import { app } from 'electron';
+const fs = require('fs');
+const path = require('path');
+const { app } = require('electron');
 var BackupService = /** @class */ (function () {
     function BackupService(dbPath) {
         this.maxBackups = 10;
@@ -244,4 +244,4 @@ var BackupService = /** @class */ (function () {
     };
     return BackupService;
 }());
-export { BackupService };
+module.exports = { BackupService };

@@ -1,4 +1,4 @@
-import { InterestService } from './interest.service';
+const { InterestService } = require('./interest.service');
 var ReportsService = /** @class */ (function () {
     function ReportsService(dbService) {
         this.db = dbService.getDatabase();
@@ -133,6 +133,10 @@ var ReportsService = /** @class */ (function () {
         }
         return assetsFlat;
     };
+    ReportsService.prototype.getClientPNs = function (clientId) {
+        var stmt = this.db.prepare("\n      SELECT \n        pn.*,\n        d.request_number,\n        d.client_id\n      FROM promissory_notes pn\n      INNER JOIN disbursements d ON pn.disbursement_id = d.id\n      WHERE d.client_id = ?\n      ORDER BY pn.issue_date DESC\n    ");
+        return stmt.all(clientId);
+    };
     return ReportsService;
 }());
-export { ReportsService };
+module.exports = { ReportsService };

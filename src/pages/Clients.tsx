@@ -14,6 +14,10 @@ interface Client {
   jurisdiction: string
   contactEmail?: string
   contactPhone?: string
+  creditLimit?: number
+  interestRateAnnual?: number
+  dayBasis?: 360 | 365
+  defaultDueDays?: number
   signatories?: string
   status: 'Active' | 'Inactive'
   notes?: string
@@ -42,6 +46,10 @@ export const Clients: React.FC = () => {
     jurisdiction: '',
     contactEmail: '',
     contactPhone: '',
+    creditLimit: 50000000,
+    interestRateAnnual: 14.50,
+    dayBasis: 360,
+    defaultDueDays: 90,
     status: 'Active',
     notes: ''
   })
@@ -73,6 +81,10 @@ export const Clients: React.FC = () => {
       jurisdiction: '',
       contactEmail: '',
       contactPhone: '',
+      creditLimit: 50000000,
+      interestRateAnnual: 14.50,
+      dayBasis: 360,
+      defaultDueDays: 90,
       status: 'Active',
       notes: ''
     })
@@ -89,6 +101,10 @@ export const Clients: React.FC = () => {
       jurisdiction: client.jurisdiction,
       contactEmail: client.contactEmail || '',
       contactPhone: client.contactPhone || '',
+      creditLimit: client.creditLimit || 50000000,
+      interestRateAnnual: client.interestRateAnnual || 14.50,
+      dayBasis: client.dayBasis || 360,
+      defaultDueDays: client.defaultDueDays || 90,
       status: client.status,
       notes: client.notes || ''
     })
@@ -256,6 +272,69 @@ export const Clients: React.FC = () => {
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
                   </select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Credit Line Configuration */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Credit Line Configuration</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Input
+                    label="Credit Limit (USD)"
+                    type="number"
+                    step="0.01"
+                    value={formData.creditLimit}
+                    onChange={(e) => setFormData({ ...formData, creditLimit: parseFloat(e.target.value) })}
+                  />
+                  <p className="text-xs text-text-secondary mt-1">
+                    Maximum credit available for this client
+                  </p>
+                </div>
+
+                <div>
+                  <Input
+                    label="Annual Interest Rate (%)"
+                    type="number"
+                    step="0.01"
+                    value={formData.interestRateAnnual}
+                    onChange={(e) => setFormData({ ...formData, interestRateAnnual: parseFloat(e.target.value) })}
+                  />
+                  <p className="text-xs text-text-secondary mt-1">
+                    Interest rate for this client's promissory notes
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-text-primary mb-1.5">
+                    Day Basis for Interest Calculation
+                  </label>
+                  <select
+                    value={formData.dayBasis}
+                    onChange={(e) => setFormData({ ...formData, dayBasis: parseInt(e.target.value) as 360 | 365 })}
+                    className="w-full px-3 py-2.5 text-sm border border-border-gray rounded-md focus:outline-none focus:ring-2 focus:ring-green-primary"
+                    aria-label="Day basis for interest calculation"
+                  >
+                    <option value="360">360 days (Standard)</option>
+                    <option value="365">365 days (Actual)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <Input
+                    label="Default Due Days"
+                    type="number"
+                    value={formData.defaultDueDays}
+                    onChange={(e) => setFormData({ ...formData, defaultDueDays: parseInt(e.target.value) })}
+                  />
+                  <p className="text-xs text-text-secondary mt-1">
+                    Days after disbursement until payment due
+                  </p>
                 </div>
               </div>
             </CardContent>

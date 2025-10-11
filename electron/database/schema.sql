@@ -24,12 +24,50 @@ CREATE TABLE IF NOT EXISTS config (
   lender_signatories TEXT,
   borrower_signatories TEXT,
   
+  -- DocuSign Integration
+  docusign_integration_key TEXT,
+  docusign_account_id TEXT,
+  docusign_user_id TEXT,
+  docusign_base_path TEXT DEFAULT 'https://demo.docusign.net/restapi',
+  webhook_url TEXT,
+  webhook_secret TEXT,
+  
+  -- Email Configuration
+  email_host TEXT DEFAULT 'mail.infomaniak.com',
+  email_port INTEGER DEFAULT 587,
+  email_secure INTEGER DEFAULT 0,
+  email_user TEXT DEFAULT 'operations@wmf-corp.com',
+  email_pass TEXT,
+  bank_email TEXT,
+  
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insert default config
-INSERT OR IGNORE INTO config (id) VALUES (1);
+-- Insert default config with DocuSign credentials
+INSERT OR IGNORE INTO config (
+  id,
+  docusign_integration_key,
+  docusign_account_id,
+  docusign_user_id,
+  docusign_base_path,
+  email_host,
+  email_port,
+  email_secure,
+  email_user,
+  email_pass
+) VALUES (
+  1,
+  '2200e5dd-3ef2-40a8-bc5e-facfa2653b95',
+  '5d45cf48-f587-45ce-a6f4-f8693c714f7c',
+  '00246cfe-b264-45f4-aeff-82e51cb93ed1',
+  'https://demo.docusign.net/restapi',
+  'mail.infomaniak.com',
+  587,
+  0,
+  'operations@wmf-corp.com',
+  '2fEfeUwtPxYQPNqp'
+);
 
 -- ==================== USERS ====================
 CREATE TABLE IF NOT EXISTS users (
@@ -66,6 +104,38 @@ CREATE TABLE IF NOT EXISTS audit_log (
 -- Index for fast filtering
 CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_log(timestamp);
 CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id);
+
+-- ==================== CLIENTS ====================
+CREATE TABLE IF NOT EXISTS clients (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  tax_id TEXT NOT NULL UNIQUE,
+  address TEXT NOT NULL,
+  jurisdiction TEXT NOT NULL,
+  contact_email TEXT,
+  contact_phone TEXT,
+  
+  -- Credit line configuration per client
+  credit_limit REAL NOT NULL DEFAULT 50000000.00,
+  interest_rate_annual REAL NOT NULL DEFAULT 14.50,
+  day_basis INTEGER NOT NULL DEFAULT 360 CHECK (day_basis IN (360, 365)),
+  default_due_days INTEGER NOT NULL DEFAULT 90,
+  
+  signatories TEXT, -- JSON string array
+  status TEXT NOT NULL DEFAULT 'Active' CHECK (status IN ('Active', 'Inactive')),
+  notes TEXT,
+  created_by INTEGER NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_client_status ON clients(status);
+CREATE INDEX IF NOT EXISTS idx_client_tax_id ON clients(tax_id);
+
+-- Insert default client (Whole Max - using borrower info from config)
+INSERT OR IGNORE INTO clients (id, name, tax_id, address, jurisdiction, credit_limit, interest_rate_annual, day_basis, default_due_days, status, created_by)
+VALUES (1, 'Whole Max', '65-1234567', '1234 Commerce Boulevard, Miami, FL 33101, United States', 'Florida, USA', 50000000.00, 14.50, 360, 90, 'Active', 1);
 
 -- ==================== DISBURSEMENTS ====================
 CREATE TABLE IF NOT EXISTS disbursements (

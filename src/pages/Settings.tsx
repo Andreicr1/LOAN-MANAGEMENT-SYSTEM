@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -8,10 +9,6 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { formatMoney, formatPercentage, formatDateTime } from '@/lib/utils'
 
 interface Config {
-  creditLimitTotal: number
-  interestRateAnnual: number
-  dayBasis: 360 | 365
-  defaultDueDays: number
   pnNumberFormat: string
   lender: {
     name: string
@@ -19,14 +16,7 @@ interface Config {
     address: string
     jurisdiction: string
   }
-  borrower: {
-    name: string
-    taxId: string
-    address: string
-    jurisdiction: string
-  }
   lenderSignatories?: Array<{ name: string; email: string; role: string }>
-  borrowerSignatories?: Array<{ name: string; email: string; role: string }>
   docusign?: {
     integrationKey: string
     accountId: string
@@ -45,6 +35,7 @@ interface Config {
 }
 
 export const Settings: React.FC = () => {
+  const navigate = useNavigate()
   const currentUser = useAuthStore((state) => state.user)
   const { t } = useLanguage()
   const theme = useTheme()
@@ -101,7 +92,6 @@ export const Settings: React.FC = () => {
       setConfig({
         ...data,
         lenderSignatories: data.lenderSignatories ? JSON.parse(data.lenderSignatories) : [],
-        borrowerSignatories: data.borrowerSignatories ? JSON.parse(data.borrowerSignatories) : [],
         docusign: data.docusignIntegrationKey ? {
           integrationKey: data.docusignIntegrationKey || '',
           accountId: data.docusignAccountId || '',
@@ -146,7 +136,6 @@ export const Settings: React.FC = () => {
         ...config,
         // Signatories
         lenderSignatories: config.lenderSignatories ? JSON.stringify(config.lenderSignatories) : null,
-        borrowerSignatories: config.borrowerSignatories ? JSON.stringify(config.borrowerSignatories) : null,
         // DocuSign fields
         docusignIntegrationKey: config.docusign?.integrationKey || null,
         docusignAccountId: config.docusign?.accountId || null,
@@ -172,8 +161,6 @@ export const Settings: React.FC = () => {
       
       if (result.success) {
         await window.electronAPI.audit.log(currentUser!.id, 'CONFIG_UPDATED', {
-          creditLimit: config.creditLimitTotal,
-          interestRate: config.interestRateAnnual,
           docusignConfigured: !!config.docusign?.integrationKey,
           emailConfigured: !!config.email?.pass
         })
@@ -266,69 +253,6 @@ export const Settings: React.FC = () => {
         </div>
       )}
 
-      {/* Credit Line Parameters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Credit Line Parameters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Input
-                label="Total Credit Limit (USD)"
-                type="number"
-                step="0.01"
-                value={config.creditLimitTotal}
-                onChange={(e) => setConfig({ ...config, creditLimitTotal: parseFloat(e.target.value) })}
-              />
-              <p className="text-xs text-text-secondary mt-1">
-                Current: {formatMoney(config.creditLimitTotal)}
-              </p>
-            </div>
-
-            <div>
-              <Input
-                label="Annual Interest Rate (%)"
-                type="number"
-                step="0.01"
-                value={config.interestRateAnnual}
-                onChange={(e) => setConfig({ ...config, interestRateAnnual: parseFloat(e.target.value) })}
-              />
-              <p className="text-xs text-text-secondary mt-1">
-                Current: {formatPercentage(config.interestRateAnnual)}
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-text-primary mb-1.5">
-                Day Basis for Interest Calculation
-              </label>
-              <select
-                value={config.dayBasis}
-                onChange={(e) => setConfig({ ...config, dayBasis: parseInt(e.target.value) as 360 | 365 })}
-                className="w-full px-3 py-2.5 text-sm border border-border-gray rounded-md focus:outline-none focus:ring-2 focus:ring-green-primary"
-                aria-label="Day basis for interest calculation"
-              >
-                <option value="360">360 days (Standard)</option>
-                <option value="365">365 days (Actual)</option>
-              </select>
-            </div>
-
-            <div>
-              <Input
-                label="Default Due Days"
-                type="number"
-                value={config.defaultDueDays}
-                onChange={(e) => setConfig({ ...config, defaultDueDays: parseInt(e.target.value) })}
-              />
-              <p className="text-xs text-text-secondary mt-1">
-                Days after disbursement
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Lender Information */}
       <Card>
         <CardHeader>
@@ -377,50 +301,27 @@ export const Settings: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Borrower Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Borrower Information (Whole Max)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input
-              label="Legal Name"
-              value={config.borrower.name}
-              onChange={(e) => setConfig({
-                ...config,
-                borrower: { ...config.borrower, name: e.target.value }
-              })}
-            />
-
-            <Input
-              label="Tax ID / EIN"
-              value={config.borrower.taxId}
-              onChange={(e) => setConfig({
-                ...config,
-                borrower: { ...config.borrower, taxId: e.target.value }
-              })}
-            />
-
-            <div className="md:col-span-2">
-              <Input
-                label="Address"
-                value={config.borrower.address}
-                onChange={(e) => setConfig({
-                  ...config,
-                  borrower: { ...config.borrower, address: e.target.value }
-                })}
-              />
+      {/* Client Information Note */}
+      <Card className="border-2 border-green-primary bg-green-subtle">
+        <CardContent className="pt-6">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-10 h-10 bg-green-primary rounded-full flex items-center justify-center text-white font-bold">
+              i
             </div>
-
-            <Input
-              label="Jurisdiction"
-              value={config.borrower.jurisdiction}
-              onChange={(e) => setConfig({
-                ...config,
-                borrower: { ...config.borrower, jurisdiction: e.target.value }
-              })}
-            />
+            <div>
+              <p className="font-semibold text-text-primary mb-2">Client Information & Credit Lines</p>
+              <p className="text-sm text-text-secondary mb-3">
+                Credit limits, interest rates, and borrower information are now managed individually for each client. 
+                This allows you to have different terms for different clients.
+              </p>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => navigate('/clients')}
+              >
+                Manage Clients
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -447,25 +348,6 @@ export const Settings: React.FC = () => {
                   ))
                 ) : (
                   <p className="text-sm text-text-secondary">No signatories configured. Add them in Clients page.</p>
-                )}
-              </div>
-            </div>
-
-            {/* Whole Max Signatories */}
-            <div className="pt-4 border-t border-border-gray">
-              <h4 className="text-sm font-bold text-text-primary mb-3">Whole Max Signatories (Borrower)</h4>
-              <div className="space-y-2 text-sm">
-                {config.borrowerSignatories && config.borrowerSignatories.length > 0 ? (
-                  config.borrowerSignatories.map((sig, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded border border-border-gray">
-                      <div>
-                        <p className="font-semibold text-text-primary">{sig.name}</p>
-                        <p className="text-xs text-text-secondary">{sig.email} • {sig.role}</p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-text-secondary">No signatories configured. Will use client signatories.</p>
                 )}
               </div>
             </div>

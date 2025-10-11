@@ -106,6 +106,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('reports:getPeriodReport', startDate, endDate),
     getTopPNs: (limit) => ipcRenderer.invoke('reports:getTopPNs', limit),
     getAcquiredAssets: () => ipcRenderer.invoke('reports:getAcquiredAssets'),
+    getClientPNs: (clientId) => ipcRenderer.invoke('reports:getClientPNs', clientId),
   },
   
   // Backup

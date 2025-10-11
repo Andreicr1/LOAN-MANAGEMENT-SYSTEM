@@ -34,8 +34,8 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import fs from 'fs';
-import { parse } from 'csv-parse';
+const fs = require('fs');
+const { parse } = require('csv-parse');
 var BankReconciliationService = /** @class */ (function () {
     function BankReconciliationService(dbService) {
         this.db = dbService.getDatabase();
@@ -187,4 +187,4 @@ var BankReconciliationService = /** @class */ (function () {
     };
     return BankReconciliationService;
 }());
-export { BankReconciliationService };
+module.exports = { BankReconciliationService };

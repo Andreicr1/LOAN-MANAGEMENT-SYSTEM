@@ -140,4 +140,4 @@ var PromissoryNoteService = /** @class */ (function () {
     };
     return PromissoryNoteService;
 }());
-export { PromissoryNoteService };
+module.exports = { PromissoryNoteService };

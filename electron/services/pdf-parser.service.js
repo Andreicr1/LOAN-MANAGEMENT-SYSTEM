@@ -75,4 +75,4 @@ var PDFParserService = /** @class */ (function () {
     };
     return PDFParserService;
 }());
-export { PDFParserService };
+module.exports = { PDFParserService };

@@ -1,6 +1,7 @@
 import express from 'express'
 import bodyParser from 'body-parser'
 import { Server } from 'http'
+import * as https from 'https'
 import { DocuSignService } from './docusign.service'
 import { EmailService } from './email.service'
 import { DisbursementService } from './disbursement.service'
@@ -43,6 +44,91 @@ export class WebhookService {
     // Health check endpoint
     this.app.get('/health', (req, res) => {
       res.json({ status: 'ok', timestamp: new Date().toISOString() })
+    })
+
+    // OAuth callback endpoint for JWT consent
+    this.app.get('/callback', (req, res) => {
+      const code = req.query.code as string
+      const error = req.query.error as string
+      
+      if (error) {
+        console.error('❌ DocuSign OAuth error:', error)
+        res.send(`
+          <html>
+            <head><title>DocuSign - Erro na Autorização</title></head>
+            <body style="font-family: Arial; text-align: center; padding: 50px;">
+              <h1 style="color: #dc3545;">❌ Erro na Autorização</h1>
+              <p>Erro: ${error}</p>
+              <p>Tente novamente ou contate o suporte.</p>
+            </body>
+          </html>
+        `)
+        return
+      }
+      
+      console.log('✅ DocuSign OAuth callback recebido!')
+      console.log('Authorization code:', code)
+      
+      res.send(`
+        <html>
+          <head>
+            <title>DocuSign - Autorização Concedida</title>
+            <style>
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+                text-align: center;
+                padding: 50px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                margin: 0;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              }
+              .container {
+                background: white;
+                color: #333;
+                padding: 40px;
+                border-radius: 10px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                max-width: 500px;
+              }
+              h1 { color: #1dd55c; margin-bottom: 20px; }
+              .checkmark {
+                width: 80px;
+                height: 80px;
+                border-radius: 50%;
+                background: #1dd55c;
+                color: white;
+                font-size: 50px;
+                line-height: 80px;
+                margin: 0 auto 20px;
+              }
+              p { font-size: 16px; line-height: 1.6; }
+              .timer { color: #666; margin-top: 20px; font-size: 14px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="checkmark">✓</div>
+              <h1>Autorização Concedida!</h1>
+              <p>O <strong>Loan Management System</strong> foi autorizado com sucesso no DocuSign.</p>
+              <p>Você já pode enviar documentos para assinatura.</p>
+              <p class="timer">Esta janela fechará automaticamente em <span id="countdown">3</span> segundos...</p>
+            </div>
+            <script>
+              let seconds = 3;
+              const countdown = document.getElementById('countdown');
+              setInterval(() => {
+                seconds--;
+                countdown.textContent = seconds;
+                if (seconds <= 0) window.close();
+              }, 1000);
+            </script>
+          </body>
+        </html>
+      `)
     })
 
     // DocuSign webhook endpoint
@@ -317,7 +403,7 @@ export class WebhookService {
         amount: disbursement.requestedAmount,
         beneficiary: {
           name: disbursement.clientName || 'Borrower',
-          address: disbursement.clientAddress || 'N/A'
+          address: 'N/A'
         },
         assetsList: disbursement.assetsList,
         reference: `Disbursement ${disbursement.requestNumber}`
@@ -334,11 +420,52 @@ export class WebhookService {
     this.config = config
     
     return new Promise((resolve, reject) => {
-      this.server = this.app.listen(config.port, () => {
-        console.log(`Webhook server listening on port ${config.port}`)
+      // Para OAuth callback do DocuSign, DEVE ser HTTPS
+      const certPath = path.join(electronApp.getPath('userData'), 'oauth-cert.pem')
+      const keyPath = path.join(electronApp.getPath('userData'), 'oauth-key.pem')
+      
+      // Gerar ou usar certificados existentes
+      if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
+        console.log('Generating self-signed HTTPS certificate...')
+        this.generateSelfSignedCert(certPath, keyPath)
+      } else {
+        console.log('✓ Using existing HTTPS certificates')
+      }
+      
+      // Sempre usar HTTPS
+      const httpsOptions: https.ServerOptions = {
+        key: fs.readFileSync(keyPath),
+        cert: fs.readFileSync(certPath)
+      }
+      
+      this.server = https.createServer(httpsOptions, this.app).listen(config.port, () => {
+        console.log(`✓ HTTPS OAuth/Webhook server started on port ${config.port}`)
+        console.log(`  - Callback URL: https://localhost:${config.port}/callback`)
+        console.log(`  - Webhook URL: https://localhost:${config.port}/webhook/docusign`)
         resolve()
       }).on('error', reject)
     })
+  }
+  
+  private generateSelfSignedCert(certPath: string, keyPath: string): void {
+    try {
+      // Usar biblioteca selfsigned para gerar certificados válidos
+      const selfsigned = require('selfsigned')
+      
+      const attrs = [{ name: 'commonName', value: 'localhost' }]
+      const pems = selfsigned.generate(attrs, {
+        days: 365,
+        keySize: 2048,
+        algorithm: 'sha256'
+      })
+      
+      fs.writeFileSync(certPath, pems.cert)
+      fs.writeFileSync(keyPath, pems.private)
+      console.log('✓ Generated valid self-signed HTTPS certificate')
+    } catch (error) {
+      console.error('Failed to generate certificate:', error)
+      throw error
+    }
   }
 
   async stop(): Promise<void> {

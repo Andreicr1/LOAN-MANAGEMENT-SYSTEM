@@ -34,10 +34,10 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import PDFDocument from 'pdfkit';
-import fs from 'fs';
-import path from 'path';
-import { app } from 'electron';
+const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const path = require('path');
+const { app } = require('electron');
 var PDFService = /** @class */ (function () {
     function PDFService() {
         // DECISION: Store PDFs in app data directory
@@ -340,4 +340,4 @@ var PDFService = /** @class */ (function () {
     };
     return PDFService;
 }());
-export { PDFService };
+module.exports = { PDFService };

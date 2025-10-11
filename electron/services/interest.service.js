@@ -72,4 +72,4 @@ var InterestService = /** @class */ (function () {
     };
     return InterestService;
 }());
-export { InterestService };
+module.exports = { InterestService };

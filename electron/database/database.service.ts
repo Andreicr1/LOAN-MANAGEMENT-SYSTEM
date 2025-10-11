@@ -44,10 +44,148 @@ export class DatabaseService {
       schema = this.getInlineSchema()
     }
     
-    // Execute schema (supports multiple statements)
-    this.db.exec(schema)
+    // Run migrations BEFORE executing schema
+    this.runMigrations()
     
-    console.log('Database schema initialized successfully')
+    // Execute schema (supports multiple statements)
+    try {
+      this.db.exec(schema)
+      console.log('Database schema initialized successfully')
+    } catch (err) {
+      console.error('Error executing schema:', err)
+      throw err
+    }
+  }
+
+  private runMigrations() {
+    try {
+      // ========== MIGRATION 1: Add integration columns to config table ==========
+      const configCols = this.db.pragma('table_info(config)') as any[]
+      const hasDocuSignCols = configCols.some(col => col.name === 'docusign_integration_key')
+      
+      if (!hasDocuSignCols) {
+        console.log('Running migration: Adding integration columns to config table...')
+        
+        const configMigrations = [
+          { sql: 'ALTER TABLE config ADD COLUMN docusign_integration_key TEXT', name: 'docusign_integration_key' },
+          { sql: 'ALTER TABLE config ADD COLUMN docusign_account_id TEXT', name: 'docusign_account_id' },
+          { sql: 'ALTER TABLE config ADD COLUMN docusign_user_id TEXT', name: 'docusign_user_id' },
+          { sql: 'ALTER TABLE config ADD COLUMN docusign_base_path TEXT DEFAULT "https://demo.docusign.net/restapi"', name: 'docusign_base_path' },
+          { sql: 'ALTER TABLE config ADD COLUMN webhook_url TEXT', name: 'webhook_url' },
+          { sql: 'ALTER TABLE config ADD COLUMN webhook_secret TEXT', name: 'webhook_secret' },
+          { sql: 'ALTER TABLE config ADD COLUMN email_host TEXT DEFAULT "mail.infomaniak.com"', name: 'email_host' },
+          { sql: 'ALTER TABLE config ADD COLUMN email_port INTEGER DEFAULT 587', name: 'email_port' },
+          { sql: 'ALTER TABLE config ADD COLUMN email_secure INTEGER DEFAULT 0', name: 'email_secure' },
+          { sql: 'ALTER TABLE config ADD COLUMN email_user TEXT DEFAULT "operations@wmf-corp.com"', name: 'email_user' },
+          { sql: 'ALTER TABLE config ADD COLUMN email_pass TEXT', name: 'email_pass' },
+          { sql: 'ALTER TABLE config ADD COLUMN bank_email TEXT', name: 'bank_email' }
+        ]
+        
+        for (const migration of configMigrations) {
+          try {
+            this.db.exec(migration.sql)
+            console.log(`  ✓ Added column: ${migration.name}`)
+          } catch (err: any) {
+            const colExists = configCols.some(col => col.name === migration.name)
+            if (colExists) {
+              console.log(`  - Column already exists: ${migration.name}`)
+            } else {
+              console.error(`  ✗ Failed to add column ${migration.name}:`, err.message)
+            }
+          }
+        }
+        
+        // Set default values for existing config
+        try {
+          this.db.exec(`
+            UPDATE config SET 
+              docusign_integration_key = '2200e5dd-3ef2-40a8-bc5e-facfa2653b95',
+              docusign_account_id = '5d45cf48-f587-45ce-a6f4-f8693c714f7c',
+              docusign_user_id = '00246cfe-b264-45f4-aeff-82e51cb93ed1',
+              docusign_base_path = 'https://demo.docusign.net/restapi',
+              email_host = 'mail.infomaniak.com',
+              email_port = 587,
+              email_secure = 0,
+              email_user = 'operations@wmf-corp.com',
+              email_pass = '2fEfeUwtPxYQPNqp'
+            WHERE id = 1 AND docusign_integration_key IS NULL
+          `)
+          console.log('  ✓ Set default integration values')
+        } catch (err: any) {
+          console.log('  - Default values already set or error:', err.message)
+        }
+        
+        // Force update DocuSign credentials to correct values (fix wrong integration key)
+        try {
+          const currentConfig = this.db.prepare('SELECT docusign_integration_key FROM config WHERE id = 1').get() as any
+          if (currentConfig && currentConfig.docusign_integration_key !== '2200e5dd-3ef2-40a8-bc5e-facfa2653b95') {
+            this.db.exec(`
+              UPDATE config SET 
+                docusign_integration_key = '2200e5dd-3ef2-40a8-bc5e-facfa2653b95',
+                docusign_account_id = '5d45cf48-f587-45ce-a6f4-f8693c714f7c',
+                docusign_user_id = '00246cfe-b264-45f4-aeff-82e51cb93ed1',
+                updated_at = CURRENT_TIMESTAMP
+              WHERE id = 1
+            `)
+            console.log('  ✓ Updated DocuSign credentials to correct values')
+          }
+        } catch (err: any) {
+          console.log('  - DocuSign credentials update error:', err.message)
+        }
+        
+        console.log('Config integration columns migration completed successfully')
+      } else {
+        console.log('Config integration columns already exist, skipping migration')
+      }
+      
+      // ========== MIGRATION 2: Add client credit line columns ==========
+      // First check if clients table exists
+      const tables = this.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='clients'").all()
+      
+      if (tables.length === 0) {
+        console.log('Clients table does not exist yet, skipping client migration')
+        return
+      }
+      
+      // Check if clients table has credit_limit column
+      const tableInfo = this.db.pragma('table_info(clients)') as any[]
+      const hasClientColumns = tableInfo.some(col => col.name === 'credit_limit')
+      
+      if (!hasClientColumns) {
+        console.log('Running migration: Adding client credit line columns...')
+        
+        // Add columns one by one with error handling
+        const migrations = [
+          { sql: 'ALTER TABLE clients ADD COLUMN credit_limit REAL NOT NULL DEFAULT 50000000.00', name: 'credit_limit' },
+          { sql: 'ALTER TABLE clients ADD COLUMN interest_rate_annual REAL NOT NULL DEFAULT 14.50', name: 'interest_rate_annual' },
+          { sql: 'ALTER TABLE clients ADD COLUMN day_basis INTEGER NOT NULL DEFAULT 360', name: 'day_basis' },
+          { sql: 'ALTER TABLE clients ADD COLUMN default_due_days INTEGER NOT NULL DEFAULT 90', name: 'default_due_days' },
+          { sql: 'ALTER TABLE clients ADD COLUMN signatories TEXT', name: 'signatories' }
+        ]
+        
+        for (const migration of migrations) {
+          try {
+            this.db.exec(migration.sql)
+            console.log(`  ✓ Added column: ${migration.name}`)
+          } catch (err: any) {
+            // Column might already exist, check if that's the case
+            const colExists = tableInfo.some(col => col.name === migration.name)
+            if (colExists) {
+              console.log(`  - Column already exists: ${migration.name}`)
+            } else {
+              console.error(`  ✗ Failed to add column ${migration.name}:`, err.message)
+            }
+          }
+        }
+        
+        console.log('Client columns migration completed successfully')
+      } else {
+        console.log('Client columns already exist, skipping client migration')
+      }
+    } catch (err) {
+      console.error('Migration error:', err)
+      // Don't throw, allow initialization to continue
+    }
   }
 
   private getInlineSchema(): string {

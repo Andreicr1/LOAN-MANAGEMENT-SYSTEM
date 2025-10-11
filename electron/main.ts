@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import path from 'path'
+import fs from 'fs'
 import { DatabaseService } from './database/database.service'
 import { AuthService } from './services/auth.service'
 import { ConfigService } from './services/config.service'
@@ -69,16 +70,40 @@ function createWindow() {
   console.log('App path:', app.getPath('userData'))
   console.log('Preload path:', preloadPath)
   console.log('__dirname:', __dirname)
+  console.log('isDev:', isDev)
+  console.log('NODE_ENV:', process.env.NODE_ENV)
 
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show()
   })
 
-  if (isDev) {
-    mainWindow.loadURL('http://localhost:5173')
-    mainWindow.webContents.openDevTools()
+  // Try to load from dist folder (works for both dev and production)
+  const possiblePaths = [
+    path.join(__dirname, '..', '..', 'dist', 'index.html'),          // Electron Forge dev
+    path.join(__dirname, '../dist/index.html'),                      // Built version
+    path.join(process.resourcesPath, 'app.asar', 'dist', 'index.html'), // Production
+    path.join(process.cwd(), 'dist', 'index.html')                   // Fallback
+  ]
+  
+  let indexPath = ''
+  for (const testPath of possiblePaths) {
+    if (fs.existsSync(testPath)) {
+      indexPath = testPath
+      console.log('✓ Found index.html at:', indexPath)
+      break
+    } else {
+      console.log('  Tried:', testPath, '- NOT FOUND')
+    }
+  }
+  
+  if (indexPath) {
+    mainWindow.loadFile(indexPath)
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
+    console.error('❌ Could not find index.html in any expected location!')
+  }
+  
+  if (isDev) {
+    mainWindow.webContents.openDevTools()
   }
 
   mainWindow.on('closed', () => {
@@ -114,6 +139,19 @@ function initializeServices() {
   // Enable auto backup every 24 hours
   backupService.enableAutoBackup(24)
 
+  // Start OAuth/Webhook server on port 8765 (HTTPS)
+  if (webhookService) {
+    webhookService.start({
+      port: 8765,
+      path: '/webhook/docusign',
+      secret: configService?.getConfig().webhookSecret || 'default-secret'
+    }).then(() => {
+      console.log('✓ OAuth/Webhook server started on https://localhost:8765')
+    }).catch((error) => {
+      console.error('Failed to start OAuth/Webhook server:', error)
+    })
+  }
+
   console.log(`Database initialized at: ${dbPath}`)
 }
 
@@ -130,9 +168,16 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
+    // Stop webhook server
+    webhookService?.stop()
     db?.close()
     app.quit()
   }
+})
+
+app.on('before-quit', async () => {
+  // Cleanup
+  await webhookService?.stop()
 })
 
 // ==================== IPC HANDLERS ====================
@@ -187,8 +232,9 @@ ipcMain.handle('config:update', async (_, data: any) => {
 ipcMain.handle('config:setupIntegrations', async () => {
   try {
     const config = {
-      docusignIntegrationKey: '22cbfa52b-5af7-42de-bc9ea4e652ab',
+      docusignIntegrationKey: '2200e5dd-3ef2-40a8-bc5e-facfa2653b95',
       docusignAccountId: '5d45cf48-f587-45ce-a6f4-f8693c714f7c',
+      docusignUserId: '00246cfe-b264-45f4-aeff-82e51cb93ed1',
       docusignBasePath: 'https://demo.docusign.net/restapi',
       emailHost: 'mail.infomaniak.com',
       emailPort: 587,
@@ -537,6 +583,7 @@ ipcMain.handle('docusign.sendPromissoryNoteForSignature', async (_, data: {
     await docuSignService.initialize({
       integrationKey: config.docusignIntegrationKey,
       secretKey: config.docusignAccountId, // In production, use proper secret key
+      userId: config.docusignUserId || '00246cfe-b264-45f4-aeff-82e51cb93ed1',
       redirectUri: 'https://localhost:8765/callback',
       basePath: config.docusignBasePath || 'https://demo.docusign.net/restapi',
       accountId: config.docusignAccountId,
@@ -601,6 +648,7 @@ ipcMain.handle('docusign.sendWireTransferForSignature', async (_, data: {
     await docuSignService.initialize({
       integrationKey: config.docusignIntegrationKey,
       secretKey: config.docusignAccountId, // In production, use proper secret key
+      userId: config.docusignUserId || '00246cfe-b264-45f4-aeff-82e51cb93ed1',
       redirectUri: 'https://localhost:8765/callback',
       basePath: config.docusignBasePath || 'https://demo.docusign.net/restapi',
       accountId: config.docusignAccountId,

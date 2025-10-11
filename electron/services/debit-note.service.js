@@ -9,7 +9,7 @@ var __assign = (this && this.__assign) || function () {
     };
     return __assign.apply(this, arguments);
 };
-import { InterestService } from './interest.service';
+const { InterestService } = require('./interest.service');
 var DebitNoteService = /** @class */ (function () {
     function DebitNoteService(dbService) {
         this.db = dbService.getDatabase();
@@ -155,4 +155,4 @@ var DebitNoteService = /** @class */ (function () {
     };
     return DebitNoteService;
 }());
-export { DebitNoteService };
+module.exports = { DebitNoteService };

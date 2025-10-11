@@ -75,4 +75,4 @@ var DatabaseService = /** @class */ (function () {
     };
     return DatabaseService;
 }());
-export { DatabaseService };
+module.exports = { DatabaseService };

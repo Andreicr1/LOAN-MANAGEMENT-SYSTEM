@@ -37,6 +37,7 @@ export const BankReconciliation: React.FC = () => {
     description: '',
     reference: '',
   })
+  const [importing, setImporting] = useState(false)
   const [matchedFilter, setMatchedFilter] = useState<string>('all')
   const [selectedTransaction, setSelectedTransaction] = useState<number | null>(null)
   const [suggestions, setSuggestions] = useState<PromissoryNoteSuggestion[]>([])
@@ -76,6 +77,46 @@ export const BankReconciliation: React.FC = () => {
     } catch (error) {
       console.error('Failed to load summary:', error)
     }
+  }
+
+  const handleFileImport = async () => {
+    // Open file dialog
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.csv'
+    
+    input.onchange = async (e: any) => {
+      const file = e.target?.files?.[0]
+      if (!file) return
+
+      setImporting(true)
+      try {
+        // Read file path (Electron provides access to file path)
+        const filePath = (file as any).path
+        
+        const result = await window.electronAPI.bankRecon.importCSV(filePath)
+        
+        if (result.success) {
+          await window.electronAPI.audit.log(currentUser!.id, 'BANK_TRANSACTIONS_IMPORTED_FROM_CSV', {
+            imported: result.imported,
+            errors: result.errors.length,
+          })
+          
+          alert(`Successfully imported ${result.imported} transactions!${result.errors.length > 0 ? `\n\nWarning: ${result.errors.length} rows had errors.` : ''}`)
+          loadTransactions()
+          loadSummary()
+        } else {
+          alert(`Failed to import transactions.\n\nErrors:\n${result.errors.join('\n')}`)
+        }
+      } catch (error) {
+        console.error('Failed to import CSV:', error)
+        alert('Failed to import CSV file')
+      } finally {
+        setImporting(false)
+      }
+    }
+    
+    input.click()
   }
 
   const handleImport = async (e: React.FormEvent) => {
@@ -173,9 +214,14 @@ export const BankReconciliation: React.FC = () => {
           <p className="text-text-secondary mt-1">Match bank transactions with promissory notes</p>
         </div>
         {canMatch && (
-          <Button onClick={() => setShowImport(true)}>
-            Import Transaction
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleFileImport} disabled={importing}>
+              {importing ? 'Importing...' : 'Import CSV File'}
+            </Button>
+            <Button variant="secondary" onClick={() => setShowImport(true)}>
+              Manual Import
+            </Button>
+          </div>
         )}
       </div>
 

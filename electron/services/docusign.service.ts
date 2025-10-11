@@ -7,6 +7,7 @@ import * as crypto from 'crypto'
 export interface DocuSignConfig {
   integrationKey: string
   secretKey: string
+  userId: string
   redirectUri: string
   basePath: string
   accountId: string
@@ -63,7 +64,7 @@ export class DocuSignService {
       const jwtLifeSec = 3600 // 1 hour
       const results = await this.apiClient.requestJWTUserToken(
         this.config.integrationKey,
-        'impersonated-user-guid', // You'll need to configure this
+        this.config.userId,
         ['signature', 'impersonation'],
         privateKey,
         jwtLifeSec

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './stores/authStore'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { ThemeProvider } from './contexts/ThemeContext'
@@ -42,7 +42,7 @@ function App() {
   return (
     <ThemeProvider>
       <LanguageProvider>
-        <BrowserRouter>
+        <HashRouter>
           <Routes>
             {/* Public Routes */}
             <Route 
@@ -76,7 +76,7 @@ function App() {
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
-        </BrowserRouter>
+        </HashRouter>
       </LanguageProvider>
     </ThemeProvider>
   )

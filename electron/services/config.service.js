@@ -98,4 +98,4 @@ var ConfigService = /** @class */ (function () {
     };
     return ConfigService;
 }());
-export { ConfigService };
+module.exports = { ConfigService };
