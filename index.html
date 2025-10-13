@@ -27,6 +27,9 @@
       }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- SignWell Embedded Library -->
+    <script type="text/javascript" src="https://static.signwell.com/assets/embedded.js"></script>
   </head>
   <body>
     <div id="root"></div>
@@ -38,6 +41,13 @@
         } else {
           console.error('✗ electronAPI is NOT available');
           console.log('window properties:', Object.keys(window));
+        }
+        
+        // Debug: Check if SignWellEmbed is available
+        if (window.SignWellEmbed) {
+          console.log('✓ SignWellEmbed library loaded successfully!');
+        } else {
+          console.error('✗ SignWellEmbed library NOT loaded');
         }
       }, 100);
     </script>

@@ -9,6 +9,13 @@ export interface Client {
   jurisdiction: string
   contactEmail?: string
   contactPhone?: string
+  representativeName?: string | null
+  representativePassport?: string | null
+  representativeAddress?: string | null
+  creditLimit?: number | null
+  interestRateAnnual?: number | null
+  dayBasis?: 360 | 365 | null
+  defaultDueDays?: number | null
   signatories?: string // JSON string
   status: 'Active' | 'Inactive'
   notes?: string
@@ -75,9 +82,10 @@ export class ClientService {
       const stmt = this.db.prepare(`
         INSERT INTO clients (
           name, tax_id, address, jurisdiction,
-          contact_email, contact_phone, signatories,
+          contact_email, contact_phone, representative_name, representative_passport, representative_address,
+          credit_limit, interest_rate_annual, day_basis, default_due_days, signatories,
           status, notes, created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
 
       const result = stmt.run(
@@ -87,6 +95,13 @@ export class ClientService {
         data.jurisdiction,
         data.contactEmail || null,
         data.contactPhone || null,
+        data.representativeName || null,
+        data.representativePassport || null,
+        data.representativeAddress || null,
+        data.creditLimit ?? null,
+        data.interestRateAnnual ?? null,
+        data.dayBasis ?? null,
+        data.defaultDueDays ?? null,
         data.signatories || null,
         data.status,
         data.notes || null,
@@ -137,6 +152,34 @@ export class ClientService {
       if (data.contactPhone !== undefined) {
         updates.push('contact_phone = ?')
         values.push(data.contactPhone)
+      }
+      if (data.representativeName !== undefined) {
+        updates.push('representative_name = ?')
+        values.push(data.representativeName)
+      }
+      if (data.representativePassport !== undefined) {
+        updates.push('representative_passport = ?')
+        values.push(data.representativePassport)
+      }
+      if (data.representativeAddress !== undefined) {
+        updates.push('representative_address = ?')
+        values.push(data.representativeAddress)
+      }
+      if (data.creditLimit !== undefined) {
+        updates.push('credit_limit = ?')
+        values.push(data.creditLimit)
+      }
+      if (data.interestRateAnnual !== undefined) {
+        updates.push('interest_rate_annual = ?')
+        values.push(data.interestRateAnnual)
+      }
+      if (data.dayBasis !== undefined) {
+        updates.push('day_basis = ?')
+        values.push(data.dayBasis)
+      }
+      if (data.defaultDueDays !== undefined) {
+        updates.push('default_due_days = ?')
+        values.push(data.defaultDueDays)
       }
       if (data.signatories !== undefined) {
         updates.push('signatories = ?')

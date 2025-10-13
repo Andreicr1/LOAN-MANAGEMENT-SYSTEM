@@ -417,11 +417,10 @@ export const BankReconciliation: React.FC = () => {
 
                 <Input
                   label="Amount (USD)"
-                  type="number"
-                  step="0.01"
+                  numeric
                   value={importData.amount}
                   onChange={(e) => setImportData({ ...importData, amount: e.target.value })}
-                  placeholder="0.00"
+                  placeholder="0,00"
                   required
                 />
 

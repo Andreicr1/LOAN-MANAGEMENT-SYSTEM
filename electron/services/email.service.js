@@ -1,146 +1,287 @@
-const nodemailer = require('nodemailer');
-const path = require('path');
-const { app } = require('electron');
-
-var EmailService = /** @class */ (function () {
-    function EmailService() {
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.EmailService = void 0;
+const nodemailer = __importStar(require("nodemailer"));
+class EmailService {
+    constructor() {
         this.transporter = null;
         this.config = null;
     }
-    EmailService.prototype.initialize = function (config) {
-        return __awaiter(this, void 0, void 0, function () {
-            var transporter, error_1;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        this.config = config;
-                        transporter = nodemailer.createTransport({
-                            host: config.host,
-                            port: config.port,
-                            secure: config.secure,
-                            auth: config.auth,
-                            tls: {
-                                rejectUnauthorized: false // For development/testing
-                            }
-                        });
-                        _a.label = 1;
-                    case 1:
-                        _a.trys.push([1, 3, , 4]);
-                        return [4 /*yield*/, transporter.verify()];
-                    case 2:
-                        _a.sent();
-                        this.transporter = transporter;
-                        console.log('Email service ready');
-                        return [3 /*break*/, 4];
-                    case 3:
-                        error_1 = _a.sent();
-                        console.error('Email service verification failed:', error_1);
-                        throw error_1;
-                    case 4: return [2 /*return*/];
-                }
-            });
-        });
-    };
-    EmailService.prototype.sendEmail = function (message) {
-        return __awaiter(this, void 0, void 0, function () {
-            var mailOptions, info, error_2;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        if (!this.transporter || !this.config) {
-                            throw new Error('Email service not initialized');
-                        }
-                        mailOptions = {
-                            from: this.config.from,
-                            to: message.to,
-                            cc: message.cc,
-                            subject: message.subject,
-                            text: message.text,
-                            html: message.html,
-                            attachments: message.attachments
-                        };
-                        _a.label = 1;
-                    case 1:
-                        _a.trys.push([1, 3, , 4]);
-                        return [4 /*yield*/, this.transporter.sendMail(mailOptions)];
-                    case 2:
-                        info = _a.sent();
-                        console.log('Email sent:', info.messageId);
-                        return [2 /*return*/, info.messageId];
-                    case 3:
-                        error_2 = _a.sent();
-                        console.error('Failed to send email:', error_2);
-                        throw error_2;
-                    case 4: return [2 /*return*/];
-                }
-            });
-        });
-    };
-    EmailService.prototype.sendWireTransferToBank = function (bankEmail, wireTransferPdfPath, disbursementNumber, amount, borrowerName) {
-        return __awaiter(this, void 0, void 0, function () {
-            var subject, html, text;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        subject = "Wire Transfer Order - Disbursement ".concat(disbursementNumber);
-                        html = "\n      <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n        <h2 style=\"color: #0a3c10;\">Wire Transfer Order</h2>\n        \n        <p>Dear Banking Partner,</p>\n        \n        <p>Please find attached the signed Wire Transfer Order for the following disbursement:</p>\n        \n        <table style=\"border-collapse: collapse; width: 100%; margin: 20px 0;\">\n          <tr>\n            <td style=\"padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; width: 40%;\">\n              <strong>Disbursement Number:</strong>\n            </td>\n            <td style=\"padding: 8px; border: 1px solid #ddd;\">\n              ".concat(disbursementNumber, "\n            </td>\n          </tr>\n          <tr>\n            <td style=\"padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5;\">\n              <strong>Borrower:</strong>\n            </td>\n            <td style=\"padding: 8px; border: 1px solid #ddd;\">\n              ").concat(borrowerName, "\n            </td>\n          </tr>\n          <tr>\n            <td style=\"padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5;\">\n              <strong>Amount:</strong>\n            </td>\n            <td style=\"padding: 8px; border: 1px solid #ddd;\">\n              ").concat(amount, "\n            </td>\n          </tr>\n        </table>\n        \n        <p>This wire transfer has been electronically signed and approved by all authorized signatories.</p>\n        \n        <p>Please process this transfer at your earliest convenience and confirm receipt.</p>\n        \n        <p style=\"margin-top: 30px;\">Best regards,<br>\n        Operations Team<br>\n        Whole Max Financial Corp<br>\n        operations@wmf-corp.com</p>\n        \n        <hr style=\"margin-top: 40px; border: none; border-top: 1px solid #ddd;\">\n        <p style=\"font-size: 12px; color: #666;\">\n          This is an automated message from the Whole Max Loan Management System. \n          The attached document has been digitally signed via DocuSign.\n        </p>\n      </div>\n    ");
-                        text = "\nWire Transfer Order - Disbursement ".concat(disbursementNumber, "\n\nDear Banking Partner,\n\nPlease find attached the signed Wire Transfer Order for the following disbursement:\n\nDisbursement Number: ").concat(disbursementNumber, "\nBorrower: ").concat(borrowerName, "\nAmount: ").concat(amount, "\n\nThis wire transfer has been electronically signed and approved by all authorized signatories.\n\nPlease process this transfer at your earliest convenience and confirm receipt.\n\nBest regards,\nOperations Team\nWhole Max Financial Corp\noperations@wmf-corp.com\n    ").trim();
-                        return [4 /*yield*/, this.sendEmail({
-                                to: bankEmail,
-                                subject: subject,
-                                text: text,
-                                html: html,
-                                attachments: [{
-                                        filename: "Wire_Transfer_Order_".concat(disbursementNumber, ".pdf"),
-                                        path: wireTransferPdfPath,
-                                        contentType: 'application/pdf'
-                                    }]
-                            })];
-                    case 1: return [2 /*return*/, _a.sent()];
-                }
-            });
-        });
-    };
-    return EmailService;
-}());
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-
-var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
+    async initialize(config) {
+        this.config = config;
+        const transporter = nodemailer.createTransport({
+            host: config.host,
+            port: config.port,
+            secure: config.secure,
+            auth: config.auth,
+            tls: {
+                rejectUnauthorized: false // For development/testing
             }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+        });
+        // Verify connection
+        try {
+            await transporter.verify();
+            this.transporter = transporter;
+            console.log('Email service ready');
+        }
+        catch (error) {
+            console.error('Email service verification failed:', error);
+            throw error;
+        }
     }
-};
+    async sendEmail(message) {
+        if (!this.transporter || !this.config) {
+            throw new Error('Email service not initialized');
+        }
+        const mailOptions = {
+            from: this.config.from,
+            to: message.to,
+            cc: message.cc,
+            subject: message.subject,
+            text: message.text,
+            html: message.html,
+            attachments: message.attachments
+        };
+        try {
+            const info = await this.transporter.sendMail(mailOptions);
+            console.log('Email sent:', info.messageId);
+            return info.messageId;
+        }
+        catch (error) {
+            console.error('Failed to send email:', error);
+            throw error;
+        }
+    }
+    async sendWireTransferToBank(bankEmail, wireTransferPdfPath, disbursementNumber, amount, borrowerName) {
+        const subject = `Wire Transfer Order - Disbursement ${disbursementNumber}`;
+        const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #0a3c10;">Wire Transfer Order</h2>
+        
+        <p>Dear Banking Partner,</p>
+        
+        <p>Please find attached the signed Wire Transfer Order for the following disbursement:</p>
+        
+        <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; width: 40%;">
+              <strong>Disbursement Number:</strong>
+            </td>
+            <td style="padding: 8px; border: 1px solid #ddd;">
+              ${disbursementNumber}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5;">
+              <strong>Borrower:</strong>
+            </td>
+            <td style="padding: 8px; border: 1px solid #ddd;">
+              ${borrowerName}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5;">
+              <strong>Amount:</strong>
+            </td>
+            <td style="padding: 8px; border: 1px solid #ddd;">
+              ${amount}
+            </td>
+          </tr>
+        </table>
+        
+        <p>This wire transfer has been electronically signed and approved by all authorized signatories.</p>
+        
+        <p>Please process this transfer at your earliest convenience and confirm receipt.</p>
+        
+        <p style="margin-top: 30px;">Best regards,<br>
+        Operations Team<br>
+        Whole Max Financial Corp<br>
+        operations@wmf-corp.com</p>
+        
+        <hr style="margin-top: 40px; border: none; border-top: 1px solid #ddd;">
+        <p style="font-size: 12px; color: #666;">
+          This is an automated message from the Whole Max Loan Management System. 
+          The attached document has been digitally signed via DocuSign.
+        </p>
+      </div>
+    `;
+        const text = `
+Wire Transfer Order - Disbursement ${disbursementNumber}
 
-module.exports = { EmailService };
+Dear Banking Partner,
 
+Please find attached the signed Wire Transfer Order for the following disbursement:
+
+Disbursement Number: ${disbursementNumber}
+Borrower: ${borrowerName}
+Amount: ${amount}
+
+This wire transfer has been electronically signed and approved by all authorized signatories.
+
+Please process this transfer at your earliest convenience and confirm receipt.
+
+Best regards,
+Operations Team
+Whole Max Financial Corp
+operations@wmf-corp.com
+    `.trim();
+        return await this.sendEmail({
+            to: bankEmail,
+            subject,
+            text,
+            html,
+            attachments: [{
+                    filename: `Wire_Transfer_Order_${disbursementNumber}.pdf`,
+                    path: wireTransferPdfPath,
+                    contentType: 'application/pdf'
+                }]
+        });
+    }
+    async sendDocumentForSignature(recipient, documentType, disbursementNumber, signingUrl) {
+        const docName = documentType === 'PN' ? 'Promissory Note' : 'Wire Transfer Order';
+        const subject = `Action Required: Sign ${docName} - Disbursement ${disbursementNumber}`;
+        const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #0a3c10;">Electronic Signature Required</h2>
+        
+        <p>Dear Signatory,</p>
+        
+        <p>A ${docName} for Disbursement ${disbursementNumber} requires your electronic signature.</p>
+        
+        <div style="margin: 30px 0; padding: 20px; background-color: #f5f5f5; border-radius: 5px;">
+          <p style="margin: 0 0 15px 0;"><strong>Document:</strong> ${docName}</p>
+          <p style="margin: 0 0 15px 0;"><strong>Disbursement:</strong> ${disbursementNumber}</p>
+          <p style="margin: 0;"><strong>Action Required:</strong> Electronic Signature</p>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${signingUrl}" style="display: inline-block; padding: 12px 30px; background-color: #0a3c10; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
+            Sign Document
+          </a>
+        </div>
+        
+        <p><strong>Important:</strong> This link will expire in 5 days. Please sign the document at your earliest convenience.</p>
+        
+        <p style="margin-top: 30px;">Best regards,<br>
+        Operations Team<br>
+        Whole Max Financial Corp</p>
+        
+        <hr style="margin-top: 40px; border: none; border-top: 1px solid #ddd;">
+        <p style="font-size: 12px; color: #666;">
+          This email was sent from the Whole Max Loan Management System. 
+          You are receiving this because you are listed as an authorized signatory.
+        </p>
+      </div>
+    `;
+        const text = `
+Electronic Signature Required
+
+Dear Signatory,
+
+A ${docName} for Disbursement ${disbursementNumber} requires your electronic signature.
+
+Document: ${docName}
+Disbursement: ${disbursementNumber}
+Action Required: Electronic Signature
+
+Please click the following link to sign the document:
+${signingUrl}
+
+Important: This link will expire in 5 days. Please sign the document at your earliest convenience.
+
+Best regards,
+Operations Team
+Whole Max Financial Corp
+    `.trim();
+        return await this.sendEmail({
+            to: recipient,
+            subject,
+            text,
+            html
+        });
+    }
+    async sendSignatureConfirmation(recipient, documentType, disbursementNumber, signedBy, signedDate) {
+        const docName = documentType === 'PN' ? 'Promissory Note' : 'Wire Transfer Order';
+        const subject = `${docName} Signed - Disbursement ${disbursementNumber}`;
+        const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #0a3c10;">Document Successfully Signed</h2>
+        
+        <p>Dear ${signedBy},</p>
+        
+        <p>Thank you for signing the ${docName}. Your signature has been recorded.</p>
+        
+        <div style="margin: 30px 0; padding: 20px; background-color: #f0f8f0; border-radius: 5px; border-left: 4px solid #0a3c10;">
+          <p style="margin: 0 0 10px 0;"><strong>Document:</strong> ${docName}</p>
+          <p style="margin: 0 0 10px 0;"><strong>Disbursement:</strong> ${disbursementNumber}</p>
+          <p style="margin: 0 0 10px 0;"><strong>Signed by:</strong> ${signedBy}</p>
+          <p style="margin: 0;"><strong>Date Signed:</strong> ${signedDate}</p>
+        </div>
+        
+        <p>A copy of the signed document will be available in the system for your records.</p>
+        
+        <p style="margin-top: 30px;">Best regards,<br>
+        Operations Team<br>
+        Whole Max Financial Corp</p>
+      </div>
+    `;
+        const text = `
+Document Successfully Signed
+
+Dear ${signedBy},
+
+Thank you for signing the ${docName}. Your signature has been recorded.
+
+Document: ${docName}
+Disbursement: ${disbursementNumber}
+Signed by: ${signedBy}
+Date Signed: ${signedDate}
+
+A copy of the signed document will be available in the system for your records.
+
+Best regards,
+Operations Team
+Whole Max Financial Corp
+    `.trim();
+        return await this.sendEmail({
+            to: recipient,
+            subject,
+            text,
+            html
+        });
+    }
+}
+exports.EmailService = EmailService;

@@ -24,13 +24,12 @@ CREATE TABLE IF NOT EXISTS config (
   lender_signatories TEXT,
   borrower_signatories TEXT,
   
-  -- DocuSign Integration
-  docusign_integration_key TEXT,
-  docusign_account_id TEXT,
-  docusign_user_id TEXT,
-  docusign_base_path TEXT DEFAULT 'https://demo.docusign.net/restapi',
-  webhook_url TEXT,
-  webhook_secret TEXT,
+  -- SignWell Integration
+  signwell_application_id TEXT,
+  signwell_client_id TEXT,
+  signwell_secret_key TEXT,
+  signwell_api_key TEXT,
+  signwell_test_mode INTEGER DEFAULT 1, -- Boolean: 1 for test mode, 0 for production
   
   -- Email Configuration
   email_host TEXT DEFAULT 'mail.infomaniak.com',
@@ -44,13 +43,9 @@ CREATE TABLE IF NOT EXISTS config (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insert default config with DocuSign credentials
+-- Insert default config
 INSERT OR IGNORE INTO config (
   id,
-  docusign_integration_key,
-  docusign_account_id,
-  docusign_user_id,
-  docusign_base_path,
   email_host,
   email_port,
   email_secure,
@@ -58,10 +53,6 @@ INSERT OR IGNORE INTO config (
   email_pass
 ) VALUES (
   1,
-  '2200e5dd-3ef2-40a8-bc5e-facfa2653b95',
-  '5d45cf48-f587-45ce-a6f4-f8693c714f7c',
-  '00246cfe-b264-45f4-aeff-82e51cb93ed1',
-  'https://demo.docusign.net/restapi',
   'mail.infomaniak.com',
   587,
   0,
@@ -114,6 +105,9 @@ CREATE TABLE IF NOT EXISTS clients (
   jurisdiction TEXT NOT NULL,
   contact_email TEXT,
   contact_phone TEXT,
+  representative_name TEXT,
+  representative_passport TEXT,
+  representative_address TEXT,
   
   -- Credit line configuration per client
   credit_limit REAL NOT NULL DEFAULT 50000000.00,
@@ -154,10 +148,10 @@ CREATE TABLE IF NOT EXISTS disbursements (
   
   -- Wire Transfer fields
   wire_transfer_path TEXT,
-  wire_transfer_envelope_id TEXT,
-  wire_transfer_signature_status TEXT DEFAULT 'pending',
-  wire_transfer_signature_date TEXT,
   wire_transfer_signed_path TEXT,
+  wire_transfer_signwell_document_id TEXT,
+  wire_transfer_signwell_status TEXT,
+  wire_transfer_signwell_embed_url TEXT,
   bank_email_sent_date TEXT,
   
   -- Approval tracking
@@ -192,10 +186,11 @@ CREATE TABLE IF NOT EXISTS promissory_notes (
   generated_pn_path TEXT,
   signed_pn_path TEXT,
   
-  -- DocuSign fields
-  envelope_id TEXT,
-  signature_status TEXT DEFAULT 'pending',
-  signature_date TEXT,
+  -- SignWell fields
+  signwell_document_id TEXT,
+  signwell_status TEXT, -- pending, awaiting_signature, completed, declined, expired
+  signwell_embed_url TEXT,
+  signwell_completed_at TEXT,
   
   -- Settlement
   settlement_date DATE,
@@ -282,22 +277,6 @@ CREATE TABLE IF NOT EXISTS debit_note_items (
   FOREIGN KEY (debit_note_id) REFERENCES debit_notes(id) ON DELETE CASCADE,
   FOREIGN KEY (promissory_note_id) REFERENCES promissory_notes(id)
 );
-
--- ==================== DOCUSIGN ENVELOPES ====================
-CREATE TABLE IF NOT EXISTS docusign_envelopes (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  envelope_id TEXT UNIQUE NOT NULL,
-  document_type TEXT NOT NULL, -- 'PN' or 'WT'
-  document_id INTEGER NOT NULL,
-  disbursement_id INTEGER NOT NULL,
-  status TEXT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (disbursement_id) REFERENCES disbursements (id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_envelope_id ON docusign_envelopes(envelope_id);
-CREATE INDEX IF NOT EXISTS idx_envelope_disbursement ON docusign_envelopes(disbursement_id);
 
 -- ==================== CLIENTS ====================
 CREATE TABLE IF NOT EXISTS clients (

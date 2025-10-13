@@ -15,6 +15,9 @@ declare const electronAPI: {
     config: {
         get: () => Promise<any>;
         update: (data: any) => Promise<any>;
+        setupIntegrations: () => Promise<{ success: boolean; message?: string; error?: string }>;
+        unlock: (secret: string) => Promise<{ success: boolean; error?: string }>;
+        lock: () => Promise<{ success: boolean }>;
     };
     audit: {
         log: (userId: number, action: string, details: any) => Promise<any>;

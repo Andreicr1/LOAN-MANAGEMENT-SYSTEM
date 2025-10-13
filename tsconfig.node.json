@@ -11,7 +11,10 @@
     "strict": true,
     "noImplicitAny": true,
     "forceConsistentCasingInFileNames": true,
-    "outDir": "./dist-electron"
+    "outDir": "./dist-electron",
+    "types": ["node"],
+    "lib": ["ES2020"],
+    "resolveJsonModule": true
   },
   "include": ["vite.config.ts", "electron", "electron/**/*.ts", "types/**/*.d.ts"],
   "exclude": ["node_modules", "dist", "dist-electron"]

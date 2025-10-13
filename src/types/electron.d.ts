@@ -1,3 +1,19 @@
+export type SignwellNotificationType = 'promissory_note' | 'wire_transfer'
+
+export interface SignwellNotificationEntry {
+  type: SignwellNotificationType
+  id: number
+  reference: string
+  requestNumber?: string
+  disbursementId?: number
+  clientName?: string | null
+  status?: string | null
+  completedAt?: string | null
+  attachmentPath?: string | null
+  documentId: string
+  updatedAt?: string | null
+}
+
 export interface ElectronAPI {
   auth: {
     login: (username: string, password: string) => Promise<{
@@ -29,6 +45,8 @@ export interface ElectronAPI {
     get: () => Promise<any>
     update: (data: any) => Promise<any>
     setupIntegrations: () => Promise<{ success: boolean; message?: string; error?: string }>
+    unlock: (secret: string) => Promise<{ success: boolean; error?: string }>
+    lock: () => Promise<{ success: boolean }>
   }
   audit: {
     log: (userId: number, action: string, details: any) => Promise<any>
@@ -87,6 +105,7 @@ export interface ElectronAPI {
     getPeriodReport: (startDate: string, endDate: string) => Promise<any>
     getTopPNs: (limit: number) => Promise<any[]>
     getAcquiredAssets: () => Promise<any[]>
+    getSignwellNotifications: () => Promise<SignwellNotificationEntry[]>
   }
   backup: {
     create: () => Promise<any>
@@ -117,21 +136,72 @@ export interface ElectronAPI {
     error?: string
   }>
   
-  docusign: {
-    sendPromissoryNoteForSignature: (data: {
-      promissoryNoteId: number
-      pdfPath: string
-      pnNumber: string
-      disbursementNumber: string
-      signatories: Array<{ email: string, name: string }>
-    }) => Promise<{ success: boolean; envelopeId?: string; error?: string }>
+  signwell: {
+    runMigration: () => Promise<{ success: boolean; message?: string; error?: string }>
     
-    sendWireTransferForSignature: (data: {
-      disbursementId: number
+    createDocument: (data: {
+      name: string
       pdfPath: string
-      disbursementNumber: string
-      signatories: Array<{ email: string, name: string }>
-    }) => Promise<{ success: boolean; envelopeId?: string; error?: string }>
+      pdfName: string
+      recipients: Array<{ name: string; email: string }>
+    }) => Promise<{ success: boolean; documentId?: string; status?: string; error?: string }>
+    
+    getEmbeddedRequestingUrl: (documentId: string) => Promise<{
+      success: boolean
+      url?: string
+      expiresAt?: string
+      error?: string
+    }>
+    
+    openEmbeddedRequesting: (documentId: string, documentName: string) => Promise<{
+      success: boolean
+      url?: string
+      expiresAt?: string
+      error?: string
+    }>
+    
+    getDocument: (documentId: string) => Promise<{
+      success: boolean
+      document?: any
+      error?: string
+    }>
+    
+    downloadCompletedPDF: (documentId: string, savePath: string) => Promise<{
+      success: boolean
+      path?: string
+      error?: string
+    }>
+    
+    downloadAndAttach: (payload: {
+      documentId: string
+      documentType?: SignwellNotificationType
+    }) => Promise<{
+      success: boolean
+      type?: SignwellNotificationType
+      path?: string
+      status?: string
+      completedAt?: string
+      error?: string
+    }>
+
+    syncCompletedDocuments: () => Promise<{
+      success: boolean
+      summary?: {
+        processed: number
+        completed: number
+        errors: number
+      }
+      pendingPromissory?: number
+      pendingWireTransfers?: number
+      error?: string
+    }>
+    
+    sendReminder: (documentId: string) => Promise<{ success: boolean; error?: string }>
+    
+    updateAndSend: (data: {
+      documentId: string
+      recipients?: Array<{ name: string; email: string }>
+    }) => Promise<{ success: boolean; document?: any; error?: string }>
   }
   
   clients: {
@@ -143,6 +213,16 @@ export interface ElectronAPI {
     delete: (id: number) => Promise<{ success: boolean; error?: string }>
     getStats: (id: number) => Promise<any>
   }
+  
+  // Webhook event listeners
+  onWebhookUrlReady: (callback: (url: string) => void) => void
+  onSignwellDocumentCompleted: (callback: (data: {
+    documentId: string
+    documentName: string
+    pdfPath: string
+    status: string
+  }) => void) => void
+  onSignwellWindowClosed: (callback: (documentId: string) => void) => void
 }
 
 declare global {

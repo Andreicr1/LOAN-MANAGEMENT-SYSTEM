@@ -4,13 +4,21 @@ export interface PromissoryNote {
   id: number
   disbursementId: number
   pnNumber: string
+  pn_number?: string // Snake_case alias for compatibility
+  requestNumber?: string
   principalAmount: number
   interestRate: number
   issueDate: string
   dueDate: string
   status: 'Active' | 'Settled' | 'Overdue' | 'Cancelled'
   generatedPnPath?: string
+  generated_pn_path?: string // Snake_case alias for compatibility
   signedPnPath?: string
+  signed_pn_path?: string // Snake_case alias for compatibility
+  signwell_document_id?: string
+  signwell_status?: string
+  signwell_embed_url?: string
+  signwell_completed_at?: string
   envelopeId?: string
   signatureStatus?: string
   signatureDate?: string
@@ -148,6 +156,10 @@ export class PromissoryNoteService {
     status?: string
     generatedPnPath?: string
     signedPnPath?: string
+    signwellDocumentId?: string | null
+    signwellStatus?: string | null
+    signwellEmbedUrl?: string | null
+    signwellCompletedAt?: string | null
     settlementDate?: string
     settlementAmount?: number
     envelopeId?: string
@@ -162,13 +174,35 @@ export class PromissoryNoteService {
         updates.push('status = ?')
         params.push(data.status)
       }
-      if (data.generatedPnPath !== undefined) {
+      const generatedPnPath = data.generatedPnPath ?? (data as any).generated_pn_path
+      if (generatedPnPath !== undefined) {
         updates.push('generated_pn_path = ?')
-        params.push(data.generatedPnPath)
+        params.push(generatedPnPath)
       }
-      if (data.signedPnPath !== undefined) {
+      const signedPnPath = data.signedPnPath ?? (data as any).signed_pn_path
+      if (signedPnPath !== undefined) {
         updates.push('signed_pn_path = ?')
-        params.push(data.signedPnPath)
+        params.push(signedPnPath)
+      }
+      const signwellDocumentId = (data as any).signwellDocumentId ?? (data as any).signwell_document_id
+      if (signwellDocumentId !== undefined) {
+        updates.push('signwell_document_id = ?')
+        params.push(signwellDocumentId)
+      }
+      const signwellStatus = (data as any).signwellStatus ?? (data as any).signwell_status
+      if (signwellStatus !== undefined) {
+        updates.push('signwell_status = ?')
+        params.push(signwellStatus)
+      }
+      const signwellEmbedUrl = (data as any).signwellEmbedUrl ?? (data as any).signwell_embed_url
+      if (signwellEmbedUrl !== undefined) {
+        updates.push('signwell_embed_url = ?')
+        params.push(signwellEmbedUrl)
+      }
+      const signwellCompletedAt = (data as any).signwellCompletedAt ?? (data as any).signwell_completed_at
+      if (signwellCompletedAt !== undefined) {
+        updates.push('signwell_completed_at = ?')
+        params.push(signwellCompletedAt)
       }
       if (data.settlementDate !== undefined) {
         updates.push('settlement_date = ?')
@@ -263,18 +297,79 @@ export class PromissoryNoteService {
       id: row.id,
       disbursementId: row.disbursement_id,
       pnNumber: row.pn_number,
+      pn_number: row.pn_number, // Add snake_case for consistency
+      requestNumber: row.request_number,
       principalAmount: row.principal_amount,
       interestRate: row.interest_rate,
       issueDate: row.issue_date,
       dueDate: row.due_date,
       status: row.status,
       generatedPnPath: row.generated_pn_path,
+      generated_pn_path: row.generated_pn_path, // Add snake_case for consistency
       signedPnPath: row.signed_pn_path,
+      signed_pn_path: row.signed_pn_path, // Add snake_case for consistency
+      signwell_document_id: row.signwell_document_id,
+      signwell_status: row.signwell_status,
+      signwell_embed_url: row.signwell_embed_url,
+      signwell_completed_at: row.signwell_completed_at,
       settlementDate: row.settlement_date,
       settlementAmount: row.settlement_amount,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }
+  }
+
+  getBySignwellDocumentId(documentId: string): PromissoryNote | null {
+    const stmt = this.db.prepare(`
+      SELECT 
+        pn.*,
+        d.request_number
+      FROM promissory_notes pn
+      LEFT JOIN disbursements d ON pn.disbursement_id = d.id
+      WHERE pn.signwell_document_id = ?
+    `)
+
+    const row = stmt.get(documentId) as any
+    if (!row) return null
+
+    return this.mapRowToPN(row)
+  }
+
+  getPendingSignwellDocuments(): Array<{
+    id: number
+    signwellDocumentId: string
+    signwellStatus?: string | null
+    signedPnPath?: string | null
+    pnNumber?: string | null
+    requestNumber?: string | null
+  }> {
+    const stmt = this.db.prepare(`
+      SELECT
+        pn.id,
+        pn.signwell_document_id,
+        pn.signwell_status,
+        pn.signed_pn_path,
+        pn.pn_number,
+        d.request_number
+      FROM promissory_notes pn
+      INNER JOIN disbursements d ON pn.disbursement_id = d.id
+      WHERE pn.signwell_document_id IS NOT NULL
+        AND (
+          pn.signwell_status IS NULL OR
+          pn.signwell_status NOT IN ('completed') OR
+          pn.signed_pn_path IS NULL
+        )
+    `)
+
+    const rows = stmt.all() as any[]
+    return rows.map((row) => ({
+      id: row.id,
+      signwellDocumentId: row.signwell_document_id,
+      signwellStatus: row.signwell_status,
+      signedPnPath: row.signed_pn_path,
+      pnNumber: row.pn_number,
+      requestNumber: row.request_number,
+    }))
   }
 }
 

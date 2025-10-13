@@ -7,13 +7,18 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // DECISION: US format for all money and dates
-export function formatMoney(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
+export function formatMoney(amount: number, options?: { withSymbol?: boolean }): string {
+  const { withSymbol = false } = options ?? {}
+  const absolute = Math.abs(amount)
+  const formatted = new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amount)
+  }).format(absolute)
+  const prefix = amount < 0 ? '-' : ''
+  if (withSymbol) {
+    return `${prefix}$${formatted}`
+  }
+  return `${prefix}${formatted}`
 }
 
 export function formatDate(date: Date | string | null | undefined): string {

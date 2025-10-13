@@ -39,11 +39,11 @@ echo.
 
 REM Compilar TypeScript do Electron
 echo Compilando arquivos Electron...
-call npx tsc electron/main.ts electron/preload.ts --outDir dist-electron --module commonjs --target es2019 --esModuleInterop --skipLibCheck
+call npx tsc -p tsconfig.node.json
 echo.
 
 REM Copiar arquivos JS existentes
-echo Copiando arquivos de servico...
+echo Copiando arquivos de servico e database JS (fallback)...
 xcopy /y /q electron\services\*.js dist-electron\services\ >nul 2>&1
 xcopy /y /q electron\database\*.js dist-electron\database\ >nul 2>&1
 xcopy /y /q electron\utils\*.js dist-electron\utils\ >nul 2>&1

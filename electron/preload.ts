@@ -28,6 +28,8 @@ const electronAPI = {
     get: () => ipcRenderer.invoke('config:get'),
     update: (data: any) => ipcRenderer.invoke('config:update', data),
     setupIntegrations: () => ipcRenderer.invoke('config:setupIntegrations'),
+    unlock: (secret: string) => ipcRenderer.invoke('config:unlock', secret),
+    lock: () => ipcRenderer.invoke('config:lock'),
   },
 
   // Audit
@@ -111,6 +113,8 @@ const electronAPI = {
       ipcRenderer.invoke('reports:getPeriodReport', startDate, endDate),
     getTopPNs: (limit: number) => ipcRenderer.invoke('reports:getTopPNs', limit),
     getAcquiredAssets: () => ipcRenderer.invoke('reports:getAcquiredAssets'),
+    getSignwellNotifications: () =>
+      ipcRenderer.invoke('reports:getSignwellNotifications'),
   },
 
   // Backup
@@ -134,22 +138,44 @@ const electronAPI = {
   validatePDFSignature: (pdfPath: string) =>
     ipcRenderer.invoke('validatePDFSignature', pdfPath),
   
-  // DocuSign
-  docusign: {
-    sendPromissoryNoteForSignature: (data: {
-      promissoryNoteId: number
-      pdfPath: string
-      pnNumber: string
-      disbursementNumber: string
-      signatories: Array<{ email: string, name: string }>
-    }) => ipcRenderer.invoke('docusign.sendPromissoryNoteForSignature', data),
+  // SignWell
+  signwell: {
+    runMigration: () => ipcRenderer.invoke('signwell:runMigration'),
     
-    sendWireTransferForSignature: (data: {
-      disbursementId: number
+    createDocument: (data: {
+      name: string
       pdfPath: string
-      disbursementNumber: string
-      signatories: Array<{ email: string, name: string }>
-    }) => ipcRenderer.invoke('docusign.sendWireTransferForSignature', data),
+      pdfName: string
+      recipients: Array<{ name: string; email: string }>
+    }) => ipcRenderer.invoke('signwell:createDocument', data),
+    
+    getEmbeddedRequestingUrl: (documentId: string) =>
+      ipcRenderer.invoke('signwell:getEmbeddedRequestingUrl', documentId),
+    
+    openEmbeddedRequesting: (documentId: string, documentName: string) =>
+      ipcRenderer.invoke('signwell:openEmbeddedRequesting', documentId, documentName),
+    
+    getDocument: (documentId: string) =>
+      ipcRenderer.invoke('signwell:getDocument', documentId),
+    
+    downloadCompletedPDF: (documentId: string, savePath: string) =>
+      ipcRenderer.invoke('signwell:downloadCompletedPDF', documentId, savePath),
+
+    downloadAndAttach: (payload: {
+      documentId: string
+      documentType?: 'promissory_note' | 'wire_transfer'
+    }) => ipcRenderer.invoke('signwell:downloadAndAttach', payload),
+
+    syncCompletedDocuments: () =>
+      ipcRenderer.invoke('signwell:syncCompletedDocuments'),
+    
+    sendReminder: (documentId: string) =>
+      ipcRenderer.invoke('signwell:sendReminder', documentId),
+    
+    updateAndSend: (data: {
+      documentId: string
+      recipients?: Array<{ name: string; email: string }>
+    }) => ipcRenderer.invoke('signwell:updateAndSend', data),
   },
   
   // Clients
@@ -161,6 +187,24 @@ const electronAPI = {
     update: (id: number, data: any) => ipcRenderer.invoke('clients:update', id, data),
     delete: (id: number) => ipcRenderer.invoke('clients:delete', id),
     getStats: (id: number) => ipcRenderer.invoke('clients:getStats', id),
+  },
+  
+  // Webhook event listeners
+  onWebhookUrlReady: (callback: (url: string) => void) => {
+    ipcRenderer.on('webhook:url-ready', (_, url) => callback(url));
+  },
+  
+  onSignwellDocumentCompleted: (callback: (data: {
+    documentId: string;
+    documentName: string;
+    pdfPath: string;
+    status: string;
+  }) => void) => {
+    ipcRenderer.on('signwell:document-completed', (_, data) => callback(data));
+  },
+  
+  onSignwellWindowClosed: (callback: (documentId: string) => void) => {
+    ipcRenderer.on('signwell:window-closed', (_, documentId) => callback(documentId));
   },
 }
 

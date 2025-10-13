@@ -1,7 +1,7 @@
 import type DatabaseNS from 'better-sqlite3'
 const Database = require('better-sqlite3') as typeof import('better-sqlite3')
-import fs from 'fs'
-import path from 'path'
+const fs = require('fs')
+const path = require('path')
 
 export class DatabaseService {
   private db: DatabaseNS.Database
@@ -22,11 +22,12 @@ export class DatabaseService {
 
   private initialize() {
     // DECISION: Try multiple paths to find schema.sql (dev vs production)
+    const resourcesPath = ((process as any).resourcesPath || '');
     const possiblePaths = [
       path.join(__dirname, 'schema.sql'),
       path.join(__dirname, 'database', 'schema.sql'),
       path.join(process.cwd(), 'electron', 'database', 'schema.sql'),
-      path.join(process.resourcesPath || '', 'database', 'schema.sql')
+      path.join(resourcesPath, 'database', 'schema.sql')
     ]
 
     let schema = ''
@@ -182,6 +183,105 @@ export class DatabaseService {
       } else {
         console.log('Client columns already exist, skipping client migration')
       }
+
+      // Ensure representative metadata columns exist on clients table
+      const ensureClientColumn = (column: string, sql: string) => {
+        const cols = this.db.pragma('table_info(clients)') as any[]
+        if (!cols.some(col => col.name === column)) {
+          try {
+            this.db.exec(sql)
+            console.log(`  Added clients.${column} column`)
+          } catch (err: any) {
+            const alreadyExists = (err?.message || '').includes('duplicate column')
+            if (alreadyExists) {
+              console.log(`  - clients.${column} column already exists`)
+            } else {
+              console.error(`  Failed to add clients.${column}:`, err.message)
+            }
+          }
+        }
+      }
+
+      ensureClientColumn('representative_name', 'ALTER TABLE clients ADD COLUMN representative_name TEXT')
+      ensureClientColumn('representative_passport', 'ALTER TABLE clients ADD COLUMN representative_passport TEXT')
+      ensureClientColumn('representative_address', 'ALTER TABLE clients ADD COLUMN representative_address TEXT')
+      
+      // ========== MIGRATION 3: Add SignWell columns ==========
+      const hasSignwellCols = configCols.some(col => col.name === 'signwell_api_key')
+      
+      if (!hasSignwellCols) {
+        console.log('Running migration: Adding SignWell columns to config table...')
+        
+        const signwellMigrations = [
+          { sql: 'ALTER TABLE config ADD COLUMN signwell_application_id TEXT', name: 'signwell_application_id' },
+          { sql: 'ALTER TABLE config ADD COLUMN signwell_client_id TEXT', name: 'signwell_client_id' },
+          { sql: 'ALTER TABLE config ADD COLUMN signwell_secret_key TEXT', name: 'signwell_secret_key' },
+          { sql: 'ALTER TABLE config ADD COLUMN signwell_api_key TEXT', name: 'signwell_api_key' },
+          { sql: 'ALTER TABLE config ADD COLUMN signwell_test_mode INTEGER DEFAULT 1', name: 'signwell_test_mode' }
+        ]
+        
+        for (const migration of signwellMigrations) {
+          try {
+            this.db.exec(migration.sql)
+            console.log(`  ✓ Added column: ${migration.name}`)
+          } catch (err: any) {
+            console.log(`  - Column ${migration.name} already exists or error:`, err.message)
+          }
+        }
+        
+        // Add SignWell columns to promissory_notes
+        try {
+          this.db.exec('ALTER TABLE promissory_notes ADD COLUMN signwell_document_id TEXT')
+          this.db.exec('ALTER TABLE promissory_notes ADD COLUMN signwell_status TEXT')
+          this.db.exec('ALTER TABLE promissory_notes ADD COLUMN signwell_embed_url TEXT')
+          this.db.exec('ALTER TABLE promissory_notes ADD COLUMN signwell_completed_at TEXT')
+          console.log('  ✓ Added SignWell columns to promissory_notes')
+        } catch (err: any) {
+          console.log('  - SignWell columns in promissory_notes already exist')
+        }
+        
+        // Add SignWell columns to disbursements
+        try {
+          this.db.exec('ALTER TABLE disbursements ADD COLUMN wire_transfer_signwell_document_id TEXT')
+          this.db.exec('ALTER TABLE disbursements ADD COLUMN wire_transfer_signwell_status TEXT')
+          this.db.exec('ALTER TABLE disbursements ADD COLUMN wire_transfer_signwell_embed_url TEXT')
+          console.log('  ✓ Added SignWell columns to disbursements')
+        } catch (err: any) {
+          console.log('  - SignWell columns in disbursements already exist')
+        }
+        
+        // Set default SignWell credentials
+        try {
+          this.db.exec(`
+            UPDATE config SET 
+              signwell_api_key = 'YWNjZXNzOjJhMWM2Y2FjYWI0ZGU2MmY0YjhjYTM0ZjFiNGY0MGU5',
+              signwell_app_unique_id = 'ac92e9b6-d96e-4b74-a7a7-9466d106338b',
+              signwell_test_mode = 1
+            WHERE id = 1 AND signwell_api_key IS NULL
+          `)
+          console.log('  ✓ Set default SignWell credentials')
+        } catch (err: any) {
+          console.log('  - SignWell credentials already set')
+        }
+        
+        // Force update to latest SignWell credentials
+        try {
+          this.db.exec(`
+            UPDATE config SET 
+              signwell_api_key = 'YWNjZXNzOjJhMWM2Y2FjYWI0ZGU2MmY0YjhjYTM0ZjFiNGY0MGU5',
+              signwell_app_unique_id = 'ac92e9b6-d96e-4b74-a7a7-9466d106338b'
+            WHERE id = 1
+          `)
+          console.log('  ✓ Updated SignWell to latest API Key')
+        } catch (err: any) {
+          console.log('  - API Key update error:', err.message)
+        }
+        
+        console.log('SignWell migration completed successfully')
+      } else {
+        console.log('SignWell columns already exist, skipping migration')
+      }
+      
     } catch (err) {
       console.error('Migration error:', err)
       // Don't throw, allow initialization to continue

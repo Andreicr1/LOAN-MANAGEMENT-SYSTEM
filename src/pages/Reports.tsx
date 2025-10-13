@@ -13,19 +13,62 @@ interface AgingReportRow {
   totalInterest: number
 }
 
+interface DashboardKPIs {
+  totalCreditLimit: number
+  availableLimit: number
+  outstandingBalance: number
+  accumulatedInterest: number
+}
+
 export const Reports: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'aging' | 'period' | 'audit' | 'assets'>('aging')
+  const [dashboardSummary, setDashboardSummary] = useState<DashboardKPIs | null>(null)
   const [agingData, setAgingData] = useState<AgingReportRow[]>([])
   const [periodData, setPeriodData] = useState<any>(null)
   const [auditLogs, setAuditLogs] = useState<any[]>([])
   const [acquiredAssets, setAcquiredAssets] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const totalAgingPrincipal = agingData.reduce((sum, row) => sum + row.totalAmount, 0)
+  const totalAgingInterest = agingData.reduce((sum, row) => sum + row.totalInterest, 0)
+  const overduePrincipal = agingData
+    .filter((row) => row.ageCategory !== 'Within Term')
+    .reduce((sum, row) => sum + row.totalAmount, 0)
+  const overdueCount = agingData
+    .filter((row) => row.ageCategory !== 'Within Term')
+    .reduce((sum, row) => sum + row.count, 0)
+  const periodSummary = periodData
+    ? {
+        netCash:
+          (periodData.settlements || 0) - (periodData.disbursements || 0),
+        interestYield:
+          periodData.avgOutstanding && periodData.avgOutstanding > 0
+            ? (periodData.interestAccrued / periodData.avgOutstanding) * 100
+            : 0,
+        turnover:
+          periodData.avgOutstanding && periodData.avgOutstanding > 0
+            ? periodData.disbursements / periodData.avgOutstanding
+            : 0,
+      }
+    : null
   
   // Period report filters
   const [periodFilters, setPeriodFilters] = useState({
     startDate: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
   })
+
+  useEffect(() => {
+    const loadSummary = async () => {
+      try {
+        const data = await window.electronAPI.reports.getDashboardKPIs()
+        setDashboardSummary(data)
+      } catch (error) {
+        console.error('Failed to load dashboard KPIs:', error)
+      }
+    }
+
+    loadSummary()
+  }, [])
 
   useEffect(() => {
     if (activeTab === 'aging') {
@@ -211,9 +254,60 @@ export const Reports: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-text-primary">Reports</h1>
-        <p className="text-text-secondary mt-1">Detailed analysis and exports</p>
+        <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Reports</h1>
+        <p className="text-sm text-text-secondary mt-1">Detailed analysis and exports</p>
       </div>
+
+      {dashboardSummary && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                Outstanding Balance
+              </p>
+              <p className="text-xl font-semibold text-text-primary mt-2">
+                {formatMoney(dashboardSummary.outstandingBalance)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                Available Credit
+              </p>
+              <p className="text-xl font-semibold text-text-primary mt-2">
+                {formatMoney(dashboardSummary.availableLimit)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                Portfolio Utilization
+              </p>
+              <p className="text-xl font-semibold text-text-primary mt-2">
+                {dashboardSummary.totalCreditLimit > 0
+                  ? `${(
+                      (dashboardSummary.outstandingBalance /
+                        dashboardSummary.totalCreditLimit) *
+                      100
+                    ).toFixed(1)}%`
+                  : '—'}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                Accrued Interest
+              </p>
+              <p className="text-xl font-semibold text-text-primary mt-2">
+                {formatMoney(dashboardSummary.accumulatedInterest)}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Tabs */}
       <Card>
@@ -285,49 +379,95 @@ export const Reports: React.FC = () => {
             ) : agingData.length === 0 ? (
               <p className="text-center text-text-secondary py-8">No data available</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-green-subtle border-b-2 border-border-gray">
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Age Category</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Count</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Total Amount</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Total Interest</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Combined</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {agingData.map((row, index) => (
-                      <tr key={index} className="border-b border-border-gray">
-                        <td className="px-4 py-3 text-sm font-medium">{row.ageCategory}</td>
-                        <td className="px-4 py-3 text-sm">{row.count}</td>
-                        <td className="px-4 py-3 text-sm font-mono">{formatMoney(row.totalAmount)}</td>
-                        <td className="px-4 py-3 text-sm font-mono">{formatMoney(row.totalInterest)}</td>
-                        <td className="px-4 py-3 text-sm font-mono font-semibold">
-                          {formatMoney(row.totalAmount + row.totalInterest)}
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  <Card>
+                    <CardContent className="pt-5">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                        Total Receivables
+                      </p>
+                      <p className="text-lg font-semibold text-text-primary mt-2">
+                        {formatMoney(totalAgingPrincipal)}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-5">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                        Overdue Exposure
+                      </p>
+                      <p className="text-lg font-semibold text-text-primary mt-2">
+                        {formatMoney(overduePrincipal)}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-5">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                        Accrued Interest
+                      </p>
+                      <p className="text-lg font-semibold text-text-primary mt-2">
+                        {formatMoney(totalAgingInterest)}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-5">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                        Overdue Items
+                      </p>
+                      <p className="text-lg font-semibold text-text-primary mt-2">
+                        {overdueCount}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-green-subtle border-b-2 border-border-gray">
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Age Category</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Count</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Total Amount</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Total Interest</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Combined</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {agingData.map((row, index) => (
+                        <tr key={index} className="border-b border-border-gray">
+                          <td className="px-4 py-3 text-sm font-medium">{row.ageCategory}</td>
+                          <td className="px-4 py-3 text-sm">{row.count}</td>
+                          <td className="px-4 py-3 text-sm font-mono">{formatMoney(row.totalAmount)}</td>
+                          <td className="px-4 py-3 text-sm font-mono">{formatMoney(row.totalInterest)}</td>
+                          <td className="px-4 py-3 text-sm font-mono font-semibold">
+                            {formatMoney(row.totalAmount + row.totalInterest)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-green-subtle font-bold">
+                        <td className="px-4 py-3 text-sm">TOTAL</td>
+                        <td className="px-4 py-3 text-sm">
+                          {agingData.reduce((sum, row) => sum + row.count, 0)}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-mono">
+                          {formatMoney(agingData.reduce((sum, row) => sum + row.totalAmount, 0))}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-mono">
+                          {formatMoney(agingData.reduce((sum, row) => sum + row.totalInterest, 0))}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-mono">
+                          {formatMoney(
+                            agingData.reduce((sum, row) => sum + row.totalAmount + row.totalInterest, 0)
+                          )}
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-green-subtle font-bold">
-                      <td className="px-4 py-3 text-sm">TOTAL</td>
-                      <td className="px-4 py-3 text-sm">
-                        {agingData.reduce((sum, row) => sum + row.count, 0)}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-mono">
-                        {formatMoney(agingData.reduce((sum, row) => sum + row.totalAmount, 0))}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-mono">
-                        {formatMoney(agingData.reduce((sum, row) => sum + row.totalInterest, 0))}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-mono">
-                        {formatMoney(agingData.reduce((sum, row) => sum + row.totalAmount + row.totalInterest, 0))}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+                    </tfoot>
+                  </table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -362,39 +502,81 @@ export const Reports: React.FC = () => {
           </Card>
 
           {periodData && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <Card>
-                <CardContent className="pt-6">
-                  <p className="text-sm text-text-secondary font-medium">Total Disbursements</p>
-                  <p className="text-2xl font-bold text-text-primary mt-2">
+                <CardContent className="pt-5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                    Total Disbursements
+                  </p>
+                  <p className="text-lg font-semibold text-text-primary mt-2">
                     {formatMoney(periodData.disbursements)}
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
-                  <p className="text-sm text-text-secondary font-medium">Total Settlements</p>
-                  <p className="text-2xl font-bold text-text-primary mt-2">
+                <CardContent className="pt-5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                    Total Settlements
+                  </p>
+                  <p className="text-lg font-semibold text-text-primary mt-2">
                     {formatMoney(periodData.settlements)}
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
-                  <p className="text-sm text-text-secondary font-medium">Interest Accrued</p>
-                  <p className="text-2xl font-bold text-text-primary mt-2">
+                <CardContent className="pt-5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                    Net Cash Flow
+                  </p>
+                  <p
+                    className={`text-lg font-semibold mt-2 ${
+                      periodSummary && periodSummary.netCash < 0
+                        ? 'text-red-600'
+                        : 'text-text-primary'
+                    }`}
+                  >
+                    {periodSummary ? formatMoney(periodSummary.netCash) : formatMoney(0)}
+                  </p>
+                  <p className="text-xs text-text-secondary mt-1">
+                    Settlements - Disbursements
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                    Interest Accrued
+                  </p>
+                  <p className="text-lg font-semibold text-text-primary mt-2">
                     {formatMoney(periodData.interestAccrued)}
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
-                  <p className="text-sm text-text-secondary font-medium">Avg Outstanding</p>
-                  <p className="text-2xl font-bold text-text-primary mt-2">
+                <CardContent className="pt-5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                    Avg Outstanding
+                  </p>
+                  <p className="text-lg font-semibold text-text-primary mt-2">
                     {formatMoney(periodData.avgOutstanding)}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                    Effective Yield
+                  </p>
+                  <p className="text-lg font-semibold text-text-primary mt-2">
+                    {periodSummary ? `${periodSummary.interestYield.toFixed(2)}%` : '—'}
+                  </p>
+                  <p className="text-xs text-text-secondary mt-1">
+                    Turnover {periodSummary ? `${periodSummary.turnover.toFixed(2)}x` : '—'}
                   </p>
                 </CardContent>
               </Card>

@@ -181,11 +181,10 @@ export const CreateDisbursement: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
                 label="Requested Amount (USD)"
-                type="number"
-                step="0.01"
+                numeric
                 value={formData.requestedAmount}
                 onChange={(e) => setFormData({ ...formData, requestedAmount: e.target.value })}
-                placeholder="0.00"
+                placeholder="0,00"
                 required
               />
 

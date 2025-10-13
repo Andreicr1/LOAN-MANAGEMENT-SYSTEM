@@ -1,45 +1,46 @@
+"use strict";
 /**
  * PDF Parser Service
  * Extracts asset information from signed PDFs from Whole Max
  */
-var PDFParserService = /** @class */ (function () {
-    function PDFParserService() {
-    }
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.PDFParserService = void 0;
+class PDFParserService {
     /**
      * Parse PDF and extract asset information
      * Looks for patterns like vehicle VINs, years, makes, models
      */
-    PDFParserService.prototype.parsePDF = function (base64Data) {
+    parsePDF(base64Data) {
         try {
             // Remove data URL prefix if present
-            var base64Clean = base64Data.replace(/^data:application\/pdf;base64,/, '');
+            const base64Clean = base64Data.replace(/^data:application\/pdf;base64,/, '');
             // Convert base64 to buffer
-            var pdfBuffer = Buffer.from(base64Clean, 'base64');
+            const pdfBuffer = Buffer.from(base64Clean, 'base64');
             // Convert buffer to string to search for patterns
-            var pdfText = pdfBuffer.toString('utf-8', 0, Math.min(pdfBuffer.length, 50000));
-            var assets = [];
+            const pdfText = pdfBuffer.toString('utf-8', 0, Math.min(pdfBuffer.length, 50000));
+            const assets = [];
             // Pattern 1: VIN numbers (17 characters, alphanumeric)
-            var vinPattern = /\b[A-HJ-NPR-Z0-9]{17}\b/g;
-            var vins = pdfText.match(vinPattern) || [];
+            const vinPattern = /\b[A-HJ-NPR-Z0-9]{17}\b/g;
+            const vins = pdfText.match(vinPattern) || [];
             // Pattern 2: Year Make Model (e.g., "2023 Honda Civic", "2024 Toyota Camry")
-            var vehiclePattern = /\b(20\d{2})\s+([A-Z][a-zA-Z]+)\s+([A-Z][a-zA-Z0-9\s]+?)(?=\s+VIN|\s+\d{17}|$)/gi;
-            var vehicles = pdfText.matchAll(vehiclePattern);
+            const vehiclePattern = /\b(20\d{2})\s+([A-Z][a-zA-Z]+)\s+([A-Z][a-zA-Z0-9\s]+?)(?=\s+VIN|\s+\d{17}|$)/gi;
+            const vehicles = pdfText.matchAll(vehiclePattern);
             // Combine VINs with vehicle info
-            var vinArray = Array.from(new Set(vins)); // Remove duplicates
-            var vehicleArray = Array.from(vehicles);
+            const vinArray = Array.from(new Set(vins)); // Remove duplicates
+            const vehicleArray = Array.from(vehicles);
             // Create asset strings
-            for (var i = 0; i < Math.max(vinArray.length, vehicleArray.length); i++) {
-                var assetString = '';
+            for (let i = 0; i < Math.max(vinArray.length, vehicleArray.length); i++) {
+                let assetString = '';
                 if (vehicleArray[i]) {
-                    var _a = vehicleArray[i], year = _a[1], make = _a[2], model = _a[3];
-                    assetString = "".concat(year, " ").concat(make, " ").concat(model.trim());
+                    const [, year, make, model] = vehicleArray[i];
+                    assetString = `${year} ${make} ${model.trim()}`;
                 }
                 if (vinArray[i]) {
                     if (assetString) {
-                        assetString += " - VIN: ".concat(vinArray[i]);
+                        assetString += ` - VIN: ${vinArray[i]}`;
                     }
                     else {
-                        assetString = "Vehicle - VIN: ".concat(vinArray[i]);
+                        assetString = `Vehicle - VIN: ${vinArray[i]}`;
                     }
                 }
                 if (assetString) {
@@ -49,9 +50,9 @@ var PDFParserService = /** @class */ (function () {
             // Pattern 3: Generic asset descriptions (fallback)
             if (assets.length === 0) {
                 // Look for lines with "Asset", "Vehicle", "Equipment"
-                var assetLines = pdfText.match(/(?:Asset|Vehicle|Equipment)[^\n]{10,100}/gi);
+                const assetLines = pdfText.match(/(?:Asset|Vehicle|Equipment)[^\n]{10,100}/gi);
                 if (assetLines) {
-                    assets.push.apply(assets, assetLines.slice(0, 5)); // Max 5 generic matches
+                    assets.push(...assetLines.slice(0, 5)); // Max 5 generic matches
                 }
             }
             if (assets.length === 0) {
@@ -72,7 +73,6 @@ var PDFParserService = /** @class */ (function () {
                 error: 'Failed to parse PDF: ' + error.message,
             };
         }
-    };
-    return PDFParserService;
-}());
-module.exports = { PDFParserService };
+    }
+}
+exports.PDFParserService = PDFParserService;

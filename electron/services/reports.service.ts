@@ -10,6 +10,22 @@ export interface DashboardKPIs {
   overduePNs: number
 }
 
+export type SignwellNotificationType = 'promissory_note' | 'wire_transfer'
+
+export interface SignwellNotification {
+  type: SignwellNotificationType
+  id: number
+  reference: string
+  requestNumber?: string
+  disbursementId?: number
+  clientName?: string | null
+  status?: string | null
+  completedAt?: string | null
+  attachmentPath?: string | null
+  documentId: string
+  updatedAt?: string | null
+}
+
 export interface AgingReportRow {
   ageCategory: string
   count: number
@@ -27,9 +43,13 @@ export class ReportsService {
   }
 
   getDashboardKPIs(): DashboardKPIs {
-    // Get config
-    const configStmt = this.db.prepare('SELECT credit_limit_total FROM config WHERE id = 1')
-    const config = configStmt.get() as any
+    // Sum credit limits from active clients
+    const limitStmt = this.db.prepare(`
+      SELECT COALESCE(SUM(credit_limit), 0) as total_limit
+      FROM clients
+      WHERE status = 'Active'
+    `)
+    const limits = limitStmt.get() as any
 
     // Get outstanding balance (sum of active PNs)
     const balanceStmt = this.db.prepare(`
@@ -51,10 +71,14 @@ export class ReportsService {
     `)
     const counts = countsStmt.get() as any
 
+    const totalCreditLimit = limits?.total_limit || 0
+    const outstandingBalance = balance.total || 0
+    const availableLimit = Math.max(totalCreditLimit - outstandingBalance, 0)
+
     return {
-      totalCreditLimit: config.credit_limit_total,
-      outstandingBalance: balance.total,
-      availableLimit: config.credit_limit_total - balance.total,
+      totalCreditLimit,
+      outstandingBalance,
+      availableLimit,
       accumulatedInterest: totalInterest,
       activePNs: counts.active || 0,
       overduePNs: counts.overdue || 0,
@@ -246,6 +270,85 @@ export class ReportsService {
     }
     
     return assetsFlat
+  }
+
+  getSignwellNotifications(): SignwellNotification[] {
+    const pnStmt = this.db.prepare(`
+      SELECT
+        pn.id,
+        pn.disbursement_id,
+        pn.pn_number,
+        pn.signwell_document_id,
+        pn.signwell_status,
+        pn.signwell_completed_at,
+        pn.signed_pn_path,
+        pn.updated_at,
+        d.request_number,
+        c.name as client_name
+      FROM promissory_notes pn
+      INNER JOIN disbursements d ON pn.disbursement_id = d.id
+      LEFT JOIN clients c ON d.client_id = c.id
+      WHERE pn.signwell_document_id IS NOT NULL
+        AND pn.signwell_status = 'completed'
+    `)
+
+    const pnRows = pnStmt.all() as any[]
+
+    const wtStmt = this.db.prepare(`
+      SELECT
+        d.id,
+        d.request_number,
+        d.wire_transfer_signwell_document_id,
+        d.wire_transfer_signwell_status,
+        d.wire_transfer_signed_path,
+        d.updated_at,
+        c.name as client_name
+      FROM disbursements d
+      LEFT JOIN clients c ON d.client_id = c.id
+      WHERE d.wire_transfer_signwell_document_id IS NOT NULL
+        AND d.wire_transfer_signwell_status = 'completed'
+    `)
+
+    const wtRows = wtStmt.all() as any[]
+
+    const notifications: SignwellNotification[] = []
+
+    for (const row of pnRows) {
+      notifications.push({
+        type: 'promissory_note',
+        id: row.id,
+        reference: row.pn_number,
+        requestNumber: row.request_number,
+        disbursementId: row.disbursement_id,
+        clientName: row.client_name,
+        status: row.signwell_status,
+        completedAt: row.signwell_completed_at ?? row.updated_at,
+        attachmentPath: row.signed_pn_path,
+        documentId: row.signwell_document_id,
+        updatedAt: row.updated_at,
+      })
+    }
+
+    for (const row of wtRows) {
+      notifications.push({
+        type: 'wire_transfer',
+        id: row.id,
+        reference: row.request_number,
+        requestNumber: row.request_number,
+        clientName: row.client_name,
+        status: row.wire_transfer_signwell_status,
+        completedAt: row.updated_at,
+        attachmentPath: row.wire_transfer_signed_path,
+        documentId: row.wire_transfer_signwell_document_id,
+        updatedAt: row.updated_at,
+      })
+    }
+
+    return notifications.sort((a, b) => {
+      const aDate = a.completedAt ? new Date(a.completedAt).getTime() : 0
+      const bDate = b.completedAt ? new Date(b.completedAt).getTime() : 0
+      return bDate - aDate
+    })
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './stores/authStore'
 import { LanguageProvider } from './contexts/LanguageContext'
@@ -15,6 +15,7 @@ import { BankReconciliation } from './pages/BankReconciliation'
 import { DebitNotes } from './pages/DebitNotes'
 import { Reports } from './pages/Reports'
 import { Clients } from './pages/Clients'
+import { SignWellTest } from './pages/SignWellTest'
 import { MainLayout } from './components/layout/MainLayout'
 
 // Placeholder pages (will be implemented in future sprints)
@@ -38,6 +39,47 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const handledDocumentsRef = useRef<Set<string>>(new Set())
+
+  useEffect(() => {
+    // Listen for webhook URL
+    window.electronAPI.onWebhookUrlReady?.((url) => {
+      console.log('🌐 Webhook URL Ready:', url);
+      console.log('📍 Configure this URL in SignWell Dashboard → Webhooks:');
+      console.log(`   ${url}/webhooks/signwell`);
+    });
+
+    // Listen for document completed events
+    window.electronAPI.onSignwellDocumentCompleted?.((data) => {
+      console.log('✅ Document signed:', data.documentName);
+
+      const documentKey = data.documentId || data.documentName
+      if (documentKey && handledDocumentsRef.current.has(documentKey)) {
+        return
+      }
+      if (documentKey) {
+        handledDocumentsRef.current.add(documentKey)
+      }
+      
+      // Show browser notification if permission granted
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Document Signed! ✅', {
+          body: `${data.documentName} has been signed and saved.`,
+          icon: '/vite.svg',
+        });
+      }
+      
+      // Show alert notification
+      setTimeout(() => {
+        alert(`✅ Document Signed!\n\n${data.documentName}\n\nThe signed PDF has been automatically downloaded and saved.`);
+      }, 500);
+    });
+
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
 
   return (
     <ThemeProvider>
@@ -71,6 +113,7 @@ function App() {
               <Route path="clients" element={<Clients />} />
               <Route path="users" element={<Users />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="signwell-test" element={<SignWellTest />} />
             </Route>
 
             {/* Catch all */}

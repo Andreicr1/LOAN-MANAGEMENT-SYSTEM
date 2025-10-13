@@ -1,54 +1,59 @@
-const fs = require('fs');
-const { app } = require('electron');
-const path = require('path');
-
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.PDFSignatureValidatorService = void 0;
+const fs_1 = __importDefault(require("fs"));
+const electron_1 = require("electron");
+const path_1 = __importDefault(require("path"));
 /**
  * PDF Signature Validator Service
  * Validates digital signatures in PDF documents
  */
-var PDFSignatureValidatorService = /** @class */ (function () {
-    function PDFSignatureValidatorService() {
-        this.uploadsPath = path.join(app.getPath('userData'), 'uploads');
-        if (!fs.existsSync(this.uploadsPath)) {
-            fs.mkdirSync(this.uploadsPath, { recursive: true });
+class PDFSignatureValidatorService {
+    constructor() {
+        this.uploadsPath = path_1.default.join(electron_1.app.getPath('userData'), 'uploads');
+        if (!fs_1.default.existsSync(this.uploadsPath)) {
+            fs_1.default.mkdirSync(this.uploadsPath, { recursive: true });
         }
     }
     /**
      * Save uploaded signed PDF
      */
-    PDFSignatureValidatorService.prototype.saveUploadedPDF = function (base64Data, fileName) {
+    async saveUploadedPDF(base64Data, fileName) {
         try {
             // Remove data URL prefix if present
-            var base64Clean = base64Data.replace(/^data:application\/pdf;base64,/, '');
+            const base64Clean = base64Data.replace(/^data:application\/pdf;base64,/, '');
             // Convert base64 to buffer
-            var pdfBuffer = Buffer.from(base64Clean, 'base64');
+            const pdfBuffer = Buffer.from(base64Clean, 'base64');
             // Generate safe filename
-            var safeFileName = fileName.replace(/[^a-z0-9.-]/gi, '_');
-            var filePath = path.join(this.uploadsPath, safeFileName);
+            const safeFileName = fileName.replace(/[^a-z0-9.-]/gi, '_');
+            const filePath = path_1.default.join(this.uploadsPath, safeFileName);
             // Save file
-            fs.writeFileSync(filePath, pdfBuffer);
-            return Promise.resolve(filePath);
+            fs_1.default.writeFileSync(filePath, pdfBuffer);
+            return filePath;
         }
         catch (error) {
             console.error('Error saving uploaded PDF:', error);
-            return Promise.reject(new Error('Failed to save uploaded PDF'));
+            throw new Error('Failed to save uploaded PDF');
         }
-    };
+    }
     /**
      * Basic validation of PDF signature
      * Note: This is a simplified check. For production, use proper PDF signature validation library.
      */
-    PDFSignatureValidatorService.prototype.validateSignature = function (pdfPath) {
+    validateSignature(pdfPath) {
         try {
-            if (!fs.existsSync(pdfPath)) {
+            if (!fs_1.default.existsSync(pdfPath)) {
                 return { isSigned: false, error: 'PDF file not found' };
             }
             // Read PDF file
-            var pdfBuffer = fs.readFileSync(pdfPath);
-            var pdfContent = pdfBuffer.toString('utf-8', 0, Math.min(pdfBuffer.length, 100000));
+            const pdfBuffer = fs_1.default.readFileSync(pdfPath);
+            const pdfContent = pdfBuffer.toString('utf-8', 0, Math.min(pdfBuffer.length, 100000));
             // Basic signature detection
             // Real PDFs with digital signatures contain these markers
-            var hasSignature = pdfContent.includes('/Type /Sig') ||
+            const hasSignature = pdfContent.includes('/Type /Sig') ||
                 pdfContent.includes('/SubFilter /adbe.pkcs7') ||
                 pdfContent.includes('/SubFilter /ETSI.CAdES') ||
                 pdfContent.includes('/ByteRange');
@@ -59,19 +64,19 @@ var PDFSignatureValidatorService = /** @class */ (function () {
                 };
             }
             // Try to extract signer name (basic pattern matching)
-            var signerMatch = pdfContent.match(/\/Name\s*\(([^)]+)\)/);
-            var signerName = signerMatch ? signerMatch[1] : 'Unknown';
+            const signerMatch = pdfContent.match(/\/Name\s*\(([^)]+)\)/);
+            const signerName = signerMatch ? signerMatch[1] : 'Unknown';
             // Try to extract sign date
-            var dateMatch = pdfContent.match(/\/M\s*\(D:(\d{14})/);
-            var signDate = void 0;
+            const dateMatch = pdfContent.match(/\/M\s*\(D:(\d{14})/);
+            let signDate;
             if (dateMatch) {
-                var dateStr = dateMatch[1];
-                signDate = "".concat(dateStr.substring(0, 4), "-").concat(dateStr.substring(4, 6), "-").concat(dateStr.substring(6, 8));
+                const dateStr = dateMatch[1];
+                signDate = `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`;
             }
             return {
                 isSigned: true,
-                signerName: signerName,
-                signDate: signDate,
+                signerName,
+                signDate,
                 certificateValid: true, // For now, assume valid
             };
         }
@@ -82,21 +87,18 @@ var PDFSignatureValidatorService = /** @class */ (function () {
                 error: 'Failed to validate signature: ' + error.message
             };
         }
-    };
+    }
     /**
      * Get file size in bytes
      */
-    PDFSignatureValidatorService.prototype.getFileSize = function (filePath) {
+    getFileSize(filePath) {
         try {
-            var stats = fs.statSync(filePath);
+            const stats = fs_1.default.statSync(filePath);
             return stats.size;
         }
-        catch (_a) {
+        catch {
             return 0;
         }
-    };
-    return PDFSignatureValidatorService;
-}());
-
-module.exports = { PDFSignatureValidatorService };
-
+    }
+}
+exports.PDFSignatureValidatorService = PDFSignatureValidatorService;
