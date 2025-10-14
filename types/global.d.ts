@@ -23,6 +23,9 @@ declare global {
       [elemName: string]: any;
     }
   }
+  interface Window {
+    electronAPI?: any
+  }
 }
 
 export {};

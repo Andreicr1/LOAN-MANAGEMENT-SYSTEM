@@ -1,10 +1,6 @@
-import { generateClient } from 'aws-amplify/data'
-import { fetchAuthSession } from 'aws-amplify/auth'
-import { amplifyEnv } from '../bootstrap/amplifyConfig'
-
 type AuthApi = {
   login(username: string, password: string): Promise<any>
-  logout(userId: string): Promise<void>
+  logout(userId: string | number): Promise<void>
 }
 
 type AuditApi = {
@@ -60,180 +56,256 @@ type ElectronApi = {
   reports: ReportsApi
   disbursements: DisbursementApi
   signwell: SignwellApi
+  onWebhookUrlReady?: (cb: (url: string) => void) => void
+  onSignwellDocumentCompleted?: (cb: (data: any) => void) => void
+  openPDF?: (path: string) => Promise<void>
+  clients?: {
+    getActive: () => Promise<any[]>
+    getStats: (id: string | number) => Promise<any>
+  }
+  promissoryNotes?: {
+    getAll: (filters?: any) => Promise<any[]>
+    settle?: (id: string | number, amount: number, date: string) => Promise<any>
+    updateOverdue?: () => Promise<void>
+  }
+  debitNotes?: {
+    getAll: () => Promise<any[]>
+  }
+  bankRecon?: {
+    getAll: (filters?: any) => Promise<any[]>
+    getSummary: () => Promise<any>
+    importCSV: (path: string) => Promise<any>
+    match: (transactionId: string | number, pnId: string | number, userId: string | number) => Promise<any>
+    unmatch: (transactionId: string | number) => Promise<any>
+    suggestMatches: (transactionId: string | number) => Promise<any[]>
+  }
+  pdf?: {
+    generatePromissoryNote?: () => Promise<string>
+    generateWireTransfer?: () => Promise<string>
+    generateDebitNote?: () => Promise<string>
+  }
+  interest?: {
+    calculateAll?: () => Promise<void>
+    getForPN?: (pnId: string | number) => Promise<number>
+    getTotal?: () => Promise<number>
+    getHistory?: () => Promise<any[]>
+  }
+  parsePDF?: (data: string) => Promise<any>
+  uploadSignedPN?: (...args: any[]) => Promise<any>
+  validatePDFSignature?: (path: string) => Promise<any>
+  [key: string]: any
 }
 
-const client = generateClient({ authMode: 'userPool' })
+const apiUrl = (window as any).__AMPLIFY_API_URL__ ?? ((import.meta as any)?.env?.VITE_AMPLIFY_API_URL as string | undefined)
 
-async function callFunction(name: string, init?: RequestInit) {
-  const session = await fetchAuthSession()
-  const token = session.tokens?.idToken?.toString()
+async function http<T = any>(path: string, init?: RequestInit): Promise<T> {
+  if (!apiUrl) throw new Error('API URL is not configured')
+  const res = await fetch(`${apiUrl}${path}`, init)
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`HTTP ${res.status} ${res.statusText}: ${text}`)
+  }
+  const contentType = res.headers.get('content-type')
+  if (contentType && contentType.includes('application/json')) {
+    return (await res.json()) as T
+  }
+  return (await res.text()) as any
+}
 
-  const response = await fetch(`${amplifyEnv.apiUrl}/${name}`, {
+function post(path: string, body?: any, headers?: Record<string, string>) {
+  return http(path, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: token } : {})
+      ...headers,
     },
-    ...init
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   })
+}
 
-  if (!response.ok) {
-    const errorBody = await response.text()
-    throw new Error(`Function ${name} failed: ${response.status} ${errorBody}`)
-  }
-
-  if (response.headers.get('content-type')?.includes('application/json')) {
-    return response.json()
-  }
-
-  return response.text()
+function get(path: string) {
+  return http(path, { method: 'GET' })
 }
 
 export function createElectronApiAdapter(): ElectronApi {
   return {
     auth: {
-      async login(username, password) {
-        const response = await fetch(`${amplifyEnv.apiUrl}/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        })
-
-        if (!response.ok) {
-          throw new Error('Login failed')
-        }
-
-        return response.json()
+      login(username, password) {
+        return post('/auth/login', { username, password })
       },
       async logout(userId) {
-        await callFunction('auth/logout', {
-          body: JSON.stringify({ userId })
-        })
-      }
+        await post('/auth/logout', { userId })
+      },
     },
     audit: {
       async log(userId, action, details) {
-        await client.models.AuditLog.create({
-          userId,
-          action,
-          details: JSON.stringify(details),
-          timestamp: new Date().toISOString()
-        })
+        console.info('[audit]', action, { userId, details })
       },
       async getAll() {
-        const result = await client.models.AuditLog.list()
-        return result.data ?? []
-      }
+        return []
+      },
     },
     users: {
       async getAll() {
-        const result = await client.models.User.list()
-        return result.data ?? []
+        return get('/users/list')
       },
-      async create(payload) {
-        return callFunction('users/create', {
-          body: JSON.stringify(payload)
-        })
+      create(payload) {
+        return post('/users/create', payload)
       },
-      async update(id, payload) {
-        return callFunction('users/update', {
-          body: JSON.stringify({ id, ...payload })
-        })
+      update(id, payload) {
+        return post('/users/update', { id, ...payload })
       },
-      async delete(id) {
-        return callFunction('users/delete', {
-          body: JSON.stringify({ id })
-        })
+      delete(id) {
+        return post('/users/delete', { id })
       },
-      async resetPassword(id, newPassword) {
-        return callFunction('users/reset-password', {
-          body: JSON.stringify({ id, newPassword })
-        })
-      }
+      resetPassword(id, newPassword) {
+        return post('/users/reset-password', { id, newPassword })
+      },
     },
     config: {
-      async get() {
-        const result = await client.models.Config.list()
-        return result.data?.[0] ?? null
+      get() {
+        return get('/config/get')
       },
-      async update(payload) {
-        return callFunction('config/update', {
-          body: JSON.stringify(payload)
-        })
+      update(payload) {
+        return post('/config/update', payload)
       },
-      async unlock(secret) {
-        return callFunction('config/unlock', {
-          body: JSON.stringify({ secret })
-        })
-      }
+      unlock(secret) {
+        return post('/config/unlock', { secret })
+      },
     },
     backup: {
       async list() {
-        const result = await callFunction('backup/list')
-        return result?.items ?? []
+        const result = await get('/backup/list')
+        return result.items ?? []
       },
-      async create() {
-        return callFunction('backup/create')
+      create() {
+        return post('/backup/create')
       },
-      async restore(key) {
-        return callFunction('backup/restore', {
-          body: JSON.stringify({ key })
-        })
-      }
+      restore(key) {
+        return post('/backup/restore', { key })
+      },
     },
     reports: {
-      async getDashboardKPIs() {
-        return callFunction('reports/dashboard-kpis')
+      getDashboardKPIs() {
+        return post('/reports/dashboard-kpis')
       },
-      async getAgingReport() {
-        return callFunction('reports/aging')
+      getAgingReport() {
+        return post('/reports/aging')
       },
-      async getPeriodReport(start, end) {
-        return callFunction('reports/period', {
-          body: JSON.stringify({ start, end })
-        })
+      getPeriodReport(start, end) {
+        return post('/reports/period', { start, end })
       },
-      async getAcquiredAssets() {
-        return callFunction('reports/acquired-assets')
-      }
+      getAcquiredAssets() {
+        return post('/reports/acquired-assets')
+      },
     },
     disbursements: {
       async getAll(filters) {
-        const result = await client.models.Disbursement.list({
-          filter: filters
-            ? Object.entries(filters).map(([field, value]) => ({ [field]: { eq: value } }))
-            : undefined
-        })
-        return result.data ?? []
+        const result = await get('/disbursements/get-all')
+        if (!filters || !filters.status) return result
+        return result.filter((item: any) => item.status === filters.status)
       },
-      async approve(id, userId) {
-        return callFunction('disbursement/approve', {
-          body: JSON.stringify({ id, userId })
-        })
+      approve(id, userId) {
+        return post('/disbursements/approve', { id, userId })
       },
-      async cancel(id) {
-        return callFunction('disbursement/cancel', {
-          body: JSON.stringify({ id })
-        })
-      }
+      cancel(id) {
+        return post('/disbursements/cancel', { id })
+      },
     },
     signwell: {
-      async createDocument(payload) {
-        return callFunction('signwell/create', {
-          body: JSON.stringify(payload)
-        })
+      createDocument(payload) {
+        return post('/signwell/create', payload)
       },
-      async getEmbeddedRequestingUrl(documentId) {
-        return callFunction('signwell/embedded-url', {
-          body: JSON.stringify({ documentId })
-        })
+      getEmbeddedRequestingUrl(documentId) {
+        return post('/signwell/embedded-url', { documentId })
       },
-      async updateAndSend(payload) {
-        return callFunction('signwell/update-send', {
-          body: JSON.stringify(payload)
-        })
-      }
-    }
+      updateAndSend(payload) {
+        return post('/signwell/update-send', payload)
+      },
+    },
+    pdf: {
+      async generatePromissoryNote() {
+        throw new Error('Not implemented')
+      },
+      async generateWireTransfer() {
+        throw new Error('Not implemented')
+      },
+      async generateDebitNote() {
+        throw new Error('Not implemented')
+      },
+    },
+    interest: {
+      async calculateAll() {
+        throw new Error('Not implemented')
+      },
+      async getForPN() {
+        return 0
+      },
+      async getTotal() {
+        return 0
+      },
+      async getHistory() {
+        return []
+      },
+    },
+    parsePDF: async () => ({ success: false, error: 'Not implemented in web' }),
+    uploadSignedPN: async () => ({ success: false, error: 'Not implemented in web' }),
+    validatePDFSignature: async () => ({ success: false, error: 'Not implemented in web' }),
+    onWebhookUrlReady: undefined,
+    onSignwellDocumentCompleted: undefined,
+    openPDF: async () => {
+      console.warn('openPDF not supported in web')
+    },
+    clients: {
+      async getActive() {
+        return []
+      },
+      async getStats() {
+        return null
+      },
+    },
+    promissoryNotes: {
+      async getAll() {
+        return []
+      },
+      async settle() {
+        throw new Error('Not implemented')
+      },
+      async updateOverdue() {
+        return
+      },
+    },
+    debitNotes: {
+      async getAll() {
+        return []
+      },
+    },
+    bankRecon: {
+      async getAll() {
+        return []
+      },
+      async getSummary() {
+        return {
+          totalTransactions: 0,
+          matchedTransactions: 0,
+          unmatchedTransactions: 0,
+          matchedAmount: 0,
+          unmatchedAmount: 0,
+        }
+      },
+      async importCSV() {
+        return { success: false, imported: 0, errors: ['CSV import não suportado na web'] }
+      },
+      async match() {
+        return { success: false }
+      },
+      async unmatch() {
+        return { success: false }
+      },
+      async suggestMatches() {
+        return []
+      },
+    },
   }
 }
 

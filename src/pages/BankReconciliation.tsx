@@ -61,8 +61,8 @@ export const BankReconciliation: React.FC = () => {
       const filters = matchedFilter === 'all' 
         ? undefined 
         : { matched: matchedFilter === 'matched' }
-      const data = await window.electronAPI.bankRecon.getAll(filters)
-      setTransactions(data)
+      const data = await window.electronAPI?.bankRecon?.getAll?.(filters)
+      setTransactions(data ?? [])
     } catch (error) {
       console.error('Failed to load transactions:', error)
     } finally {
@@ -72,8 +72,14 @@ export const BankReconciliation: React.FC = () => {
 
   const loadSummary = async () => {
     try {
-      const data = await window.electronAPI.bankRecon.getSummary()
-      setSummary(data)
+      const data = await window.electronAPI?.bankRecon?.getSummary?.()
+      setSummary(data ?? {
+        totalTransactions: 0,
+        matchedTransactions: 0,
+        unmatchedTransactions: 0,
+        matchedAmount: 0,
+        unmatchedAmount: 0,
+      })
     } catch (error) {
       console.error('Failed to load summary:', error)
     }
@@ -94,10 +100,10 @@ export const BankReconciliation: React.FC = () => {
         // Read file path (Electron provides access to file path)
         const filePath = (file as any).path
         
-        const result = await window.electronAPI.bankRecon.importCSV(filePath)
+        const result = await window.electronAPI?.bankRecon?.importCSV?.(filePath)
         
-        if (result.success) {
-          await window.electronAPI.audit.log(currentUser!.id, 'BANK_TRANSACTIONS_IMPORTED_FROM_CSV', {
+        if (result?.success) {
+          await window.electronAPI?.audit?.log?.(currentUser!.id, 'BANK_TRANSACTIONS_IMPORTED_FROM_CSV', {
             imported: result.imported,
             errors: result.errors.length,
           })
@@ -123,15 +129,17 @@ export const BankReconciliation: React.FC = () => {
     e.preventDefault()
     
     try {
-      const result = await window.electronAPI.bankRecon.import({
-        transactionDate: importData.transactionDate,
-        amount: parseFloat(importData.amount),
-        description: importData.description,
-        reference: importData.reference,
-      })
+      const result = await window.electronAPI?.bankRecon?.import?.(
+        {
+          transactionDate: importData.transactionDate,
+          amount: parseFloat(importData.amount),
+          description: importData.description,
+          reference: importData.reference,
+        }
+      )
 
-      if (result.success) {
-        await window.electronAPI.audit.log(currentUser!.id, 'BANK_TRANSACTION_IMPORTED', {
+      if (result?.success) {
+        await window.electronAPI?.audit?.log?.(currentUser!.id, 'BANK_TRANSACTION_IMPORTED', {
           amount: parseFloat(importData.amount),
           date: importData.transactionDate,
         })
@@ -153,14 +161,14 @@ export const BankReconciliation: React.FC = () => {
 
   const handleMatch = async (transactionId: number, pnId: number) => {
     try {
-      const result = await window.electronAPI.bankRecon.match(
+      const result = await window.electronAPI?.bankRecon?.match?.(
         transactionId,
         pnId,
         currentUser!.id
       )
 
-      if (result.success) {
-        await window.electronAPI.audit.log(currentUser!.id, 'TRANSACTION_MATCHED', {
+      if (result?.success) {
+        await window.electronAPI?.audit?.log?.(currentUser!.id, 'TRANSACTION_MATCHED', {
           transactionId,
           promissoryNoteId: pnId,
         })
@@ -179,10 +187,10 @@ export const BankReconciliation: React.FC = () => {
     if (!confirm('Unmatch this transaction?')) return
 
     try {
-      const result = await window.electronAPI.bankRecon.unmatch(transactionId)
+      const result = await window.electronAPI?.bankRecon?.unmatch?.(transactionId)
 
-      if (result.success) {
-        await window.electronAPI.audit.log(currentUser!.id, 'TRANSACTION_UNMATCHED', {
+      if (result?.success) {
+        await window.electronAPI?.audit?.log?.(currentUser!.id, 'TRANSACTION_UNMATCHED', {
           transactionId,
         })
         
@@ -197,8 +205,8 @@ export const BankReconciliation: React.FC = () => {
   const loadSuggestions = async (transactionId: number) => {
     setSelectedTransaction(transactionId)
     try {
-      const data = await window.electronAPI.bankRecon.suggestMatches(transactionId)
-      setSuggestions(data)
+      const suggestions = await window.electronAPI?.bankRecon?.suggestMatches?.(transactionId)
+      setSuggestions(suggestions ?? [])
     } catch (error) {
       console.error('Failed to load suggestions:', error)
     }

@@ -1,19 +1,13 @@
 import { createElectronApiAdapter } from '../adapters/electronAPI.web'
 
-declare global {
-  interface Window {
-    electronAPI?: ReturnType<typeof createElectronApiAdapter>
-  }
-}
+let polyfill: ReturnType<typeof createElectronApiAdapter> | undefined
 
 export function attachElectronApiPolyfill() {
-  if (window.electronAPI) {
-    return window.electronAPI
+  if (typeof window === 'undefined') return
+  if (!polyfill) {
+    polyfill = createElectronApiAdapter()
   }
-
-  const adapter = createElectronApiAdapter()
-  window.electronAPI = adapter
-  return adapter
+  window.electronAPI = polyfill
 }
 
 

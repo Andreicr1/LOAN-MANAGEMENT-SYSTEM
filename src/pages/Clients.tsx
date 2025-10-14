@@ -203,7 +203,7 @@ export const Clients: React.FC = () => {
   const loadClients = async () => {
     setLoading(true);
     try {
-      const data = await window.electronAPI.clients.getAll();
+      const data = await window.electronAPI?.clients?.getAll?.();
       const normalized = Array.isArray(data)
         ? data.map((item) => normalizeClientRecord(item))
         : [];
@@ -388,12 +388,12 @@ export const Clients: React.FC = () => {
     try {
       let result;
       if (editingClient) {
-        result = await window.electronAPI.clients.update(
+        result = await window.electronAPI?.clients?.update?.(
           editingClient.id,
           dataToSave,
         );
       } else {
-        result = await window.electronAPI.clients.create(dataToSave);
+        result = await window.electronAPI?.clients?.create?.(dataToSave);
       }
 
       if (result.success) {
@@ -405,7 +405,7 @@ export const Clients: React.FC = () => {
         setShowForm(false);
         loadClients();
 
-        await window.electronAPI.audit.log(
+        await window.electronAPI?.audit?.log?.(
           currentUser!.id,
           editingClient ? "CLIENT_UPDATED" : "CLIENT_CREATED",
           {
@@ -427,18 +427,18 @@ export const Clients: React.FC = () => {
       return;
 
     try {
-      const result = await window.electronAPI.clients.delete(client.id);
+      const result = await window.electronAPI?.clients?.delete?.(client.id);
 
-      if (result.success) {
+      if (result?.success) {
         alert("Client deleted successfully!");
         loadClients();
 
-        await window.electronAPI.audit.log(currentUser!.id, "CLIENT_DELETED", {
+        await window.electronAPI?.audit?.log?.(currentUser!.id, "CLIENT_DELETED", {
           clientId: client.id,
           clientName: client.name,
         });
       } else {
-        alert(result.error || "Failed to delete client");
+        alert(result?.error || "Failed to delete client");
       }
     } catch (error) {
       console.error("Error deleting client:", error);

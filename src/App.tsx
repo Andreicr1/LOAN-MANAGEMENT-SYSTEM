@@ -43,14 +43,14 @@ function App() {
 
   useEffect(() => {
     // Listen for webhook URL
-    window.electronAPI.onWebhookUrlReady?.((url) => {
+    window.electronAPI?.onWebhookUrlReady?.((url) => {
       console.log('🌐 Webhook URL Ready:', url);
       console.log('📍 Configure this URL in SignWell Dashboard → Webhooks:');
       console.log(`   ${url}/webhooks/signwell`);
     });
 
     // Listen for document completed events
-    window.electronAPI.onSignwellDocumentCompleted?.((data) => {
+    window.electronAPI?.onSignwellDocumentCompleted?.((data) => {
       console.log('✅ Document signed:', data.documentName);
 
       const documentKey = data.documentId || data.documentName

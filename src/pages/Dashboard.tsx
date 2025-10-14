@@ -89,11 +89,11 @@ export const Dashboard: React.FC = () => {
 
   const fetchSignwellNotifications = async () => {
     try {
-      if (window.electronAPI.signwell?.syncCompletedDocuments) {
+      if (window.electronAPI?.signwell?.syncCompletedDocuments) {
         await window.electronAPI.signwell.syncCompletedDocuments()
       }
 
-      const result = await window.electronAPI.reports.getSignwellNotifications()
+      const result = await window.electronAPI?.reports?.getSignwellNotifications?.()
       if (Array.isArray(result)) {
         setSignwellNotifications(result as SignwellNotificationItem[])
       } else {
@@ -118,7 +118,7 @@ export const Dashboard: React.FC = () => {
     setLoading(true)
     try {
       try {
-        const kpisData = await window.electronAPI.reports.getDashboardKPIs()
+        const kpisData = await window.electronAPI?.reports?.getDashboardKPIs?.()
         setKpis(kpisData)
       } catch (kpiError) {
         console.error('Failed to load dashboard KPIs:', kpiError)
@@ -132,19 +132,15 @@ export const Dashboard: React.FC = () => {
         })
       }
 
-      const [
-        clientsResult,
-        disbursementsResult,
-        promissoryNotesResult,
-        debitNotesResult,
-        bankTransactionsResult,
-      ] = await Promise.allSettled([
-        window.electronAPI.clients.getActive(),
-        window.electronAPI.disbursements.getAll(),
-        window.electronAPI.promissoryNotes.getAll(),
-        window.electronAPI.debitNotes.getAll(),
-        window.electronAPI.bankRecon.getAll({ matched: true }),
+      const results = await Promise.allSettled([
+        window.electronAPI?.clients?.getActive?.() ?? Promise.resolve([]),
+        window.electronAPI?.disbursements?.getAll?.() ?? Promise.resolve([]),
+        window.electronAPI?.promissoryNotes?.getAll?.() ?? Promise.resolve([]),
+        window.electronAPI?.debitNotes?.getAll?.() ?? Promise.resolve([]),
+        window.electronAPI?.bankRecon?.getAll?.({ matched: true }) ?? Promise.resolve([]),
       ])
+
+      const [clientsResult, disbursementsResult, promissoryNotesResult, debitNotesResult, bankTransactionsResult] = results
 
       const clientsList: Client[] =
         clientsResult.status === 'fulfilled' ? (clientsResult.value as Client[]) : []
@@ -188,7 +184,7 @@ export const Dashboard: React.FC = () => {
       const statsEntries = await Promise.all(
         clientsList.map(async (client) => {
           try {
-            const stats = await window.electronAPI.clients.getStats(client.id)
+            const stats = await window.electronAPI?.clients?.getStats?.(client.id)
             return [client.id, stats || { total_disbursements: 0, approved: 0, pending: 0, total_requested: 0 }]
           } catch (statsError) {
             console.error(`Error loading stats for client ${client.id}:`, statsError)
@@ -213,7 +209,7 @@ export const Dashboard: React.FC = () => {
       const interestPairs = await Promise.all(
         activePromissoryNotes.map(async (pn) => {
           try {
-            const interest = await window.electronAPI.interest.getForPN(pn.id)
+            const interest = await window.electronAPI?.interest?.getForPN?.(pn.id)
             return [pn.id, interest ?? 0]
           } catch (interestError) {
             console.error(`Error computing interest for PN ${pn.id}:`, interestError)
@@ -227,7 +223,7 @@ export const Dashboard: React.FC = () => {
       const debitNoteDetails = await Promise.all(
         paidDebitNotes.map(async (dn) => {
           try {
-            return await window.electronAPI.debitNotes.getById(dn.id)
+            return await window.electronAPI?.debitNotes?.getById?.(dn.id)
           } catch (detailError) {
             console.error(`Error loading debit note detail ${dn.id}:`, detailError)
             return null
@@ -338,7 +334,7 @@ export const Dashboard: React.FC = () => {
 
     setDownloadingDocumentId(notification.documentId)
     try {
-      const result = await window.electronAPI.signwell.downloadAndAttach({
+      const result = await window.electronAPI?.signwell?.downloadAndAttach?.({
         documentId: notification.documentId,
         documentType: notification.type,
       })
@@ -365,7 +361,7 @@ export const Dashboard: React.FC = () => {
   const handleOpenSignedDocument = (notification: SignwellNotificationItem) => {
     if (!notification.attachmentPath) return
     try {
-      window.electronAPI.openPDF(notification.attachmentPath)
+      window.electronAPI?.openPDF?.(notification.attachmentPath)
     } catch (error) {
       console.error('Failed to open signed document:', error)
       alert('Unable to open the signed document.')

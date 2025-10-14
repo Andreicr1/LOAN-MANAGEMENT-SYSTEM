@@ -275,7 +275,7 @@ export const DisbursementDetail: React.FC = () => {
       );
 
       // Open the generated PDF
-      await window.electronAPI.openPDF(pdfPath);
+      await window.electronAPI.openPDF?.(pdfPath);
       alert("Wire Transfer Order generated successfully!\n\nUse the 'Send for E-Signature' button to send via SignWell.");
       
       // Reload data to show the Wire Transfer card
@@ -348,7 +348,7 @@ export const DisbursementDetail: React.FC = () => {
     const pdfPath =
       promissoryNote?.generated_pn_path || promissoryNote?.generatedPnPath;
     if (pdfPath) {
-      await window.electronAPI.openPDF(pdfPath);
+      await window.electronAPI.openPDF?.(pdfPath);
     }
   };
 
@@ -356,7 +356,7 @@ export const DisbursementDetail: React.FC = () => {
     const pdfPath =
       promissoryNote?.signed_pn_path || promissoryNote?.signedPnPath;
     if (pdfPath) {
-      await window.electronAPI.openPDF(pdfPath);
+      await window.electronAPI.openPDF?.(pdfPath);
     }
   };
 
@@ -385,13 +385,13 @@ export const DisbursementDetail: React.FC = () => {
         const base64 = event.target?.result as string;
 
         // Upload and validate signature
-        const result = await window.electronAPI.uploadSignedPN(
+        const result = await window.electronAPI.uploadSignedPN?.(
           promissoryNote.id,
           base64,
           `${promissoryNote.pn_number}_Signed.pdf`,
         );
 
-        if (result.success) {
+        if (result?.success) {
           setSignatureInfo(result.signatureInfo);
           alert(
             `Signed PN uploaded successfully!${
@@ -416,7 +416,7 @@ export const DisbursementDetail: React.FC = () => {
 
           loadData();
         } else {
-          alert(`Failed to upload signed PN:\n\n${result.error}`);
+          alert(`Failed to upload signed PN:\n\n${result?.error}`);
         }
 
         setUploadingSignedPN(false);
@@ -1160,7 +1160,7 @@ export const DisbursementDetail: React.FC = () => {
               </p>
               
               <div className="flex flex-wrap gap-2">
-                <Button variant="secondary" size="sm" onClick={() => window.electronAPI.openPDF(disbursement.wire_transfer_path!)}>
+                <Button variant="secondary" size="sm" onClick={() => window.electronAPI.openPDF?.(disbursement.wire_transfer_path!)}>
                   📄 View Wire Transfer Order
                 </Button>
                 
@@ -1179,7 +1179,7 @@ export const DisbursementDetail: React.FC = () => {
                 )}
                 
                 {disbursement.wire_transfer_signed_path && (
-                  <Button variant="primary" size="sm" onClick={() => window.electronAPI.openPDF(disbursement.wire_transfer_signed_path!)}>
+                  <Button variant="primary" size="sm" onClick={() => window.electronAPI.openPDF?.(disbursement.wire_transfer_signed_path!)}>
                     ✅ View Signed Wire Transfer
                   </Button>
                 )}

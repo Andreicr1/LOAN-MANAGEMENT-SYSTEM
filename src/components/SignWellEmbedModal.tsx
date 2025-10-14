@@ -44,9 +44,9 @@ export const SignWellEmbedModal: React.FC<SignWellEmbedModalProps> = ({
     setError(null);
 
     try {
-      const result = await window.electronAPI.signwell.getEmbeddedRequestingUrl(documentId);
+      const result = await window.electronAPI?.signwell?.getEmbeddedRequestingUrl?.(documentId);
 
-      if (result.success && result.url) {
+      if (result?.success && result.url) {
         setEmbedUrl(result.url);
         
         // Use SignWell's embedded library

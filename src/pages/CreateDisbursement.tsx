@@ -30,7 +30,7 @@ export const CreateDisbursement: React.FC = () => {
 
   const loadClients = async () => {
     try {
-      const data = await window.electronAPI.clients.getActive()
+    const data = await window.electronAPI?.clients?.getActive?.()
       setClients(data)
     } catch (error) {
       console.error('Failed to load clients:', error)
@@ -71,9 +71,9 @@ export const CreateDisbursement: React.FC = () => {
         const base64 = event.target?.result as string
         
         // Call electron API to parse PDF
-        const result = await window.electronAPI.parsePDF(base64)
+        const result = await window.electronAPI.parsePDF?.(base64)
         
-        if (result.success && result.assets && result.assets.length > 0) {
+        if (result?.success && result.assets && result.assets.length > 0) {
           setAssets(result.assets)
         } else {
           setError('Could not extract assets from PDF. Please add them manually.')
@@ -112,7 +112,7 @@ export const CreateDisbursement: React.FC = () => {
     try {
       const assetsList = assets.filter(a => a.trim() !== '')
       
-      const result = await window.electronAPI.disbursements.create({
+      const result = await window.electronAPI?.disbursements?.create?.({
         clientId: parseInt(formData.clientId),
         requestedAmount: parseFloat(formData.requestedAmount),
         requestDate: formData.requestDate,
@@ -122,7 +122,7 @@ export const CreateDisbursement: React.FC = () => {
       })
 
       if (result.success) {
-        await window.electronAPI.audit.log(currentUser!.id, 'DISBURSEMENT_CREATED', {
+        await window.electronAPI?.audit?.log?.(currentUser!.id, 'DISBURSEMENT_CREATED', {
           requestNumber: result.requestNumber,
           amount: parseFloat(formData.requestedAmount),
         })

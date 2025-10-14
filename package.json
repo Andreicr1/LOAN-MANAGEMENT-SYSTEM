@@ -9,8 +9,8 @@
   "scripts": {
     "dev": "npx vite",
     "build": "npx vite build",
-    "dev:web": "cross-env MODE=web VITE_PLATFORM=web vite --config vite.config.ts --mode web",
-    "build:web": "cross-env MODE=web VITE_PLATFORM=web vite build --mode web",
+    "dev:web": "npx cross-env MODE=web VITE_PLATFORM=web npx vite --config vite.config.ts --mode web",
+    "build:web": "npx cross-env MODE=web VITE_PLATFORM=web npx vite build --mode web",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "npx vite preview",
     "electron:build": "npm run build && npx electron-builder --win portable --x64 --config.electronVersion=28.1.0",

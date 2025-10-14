@@ -40,7 +40,7 @@ export const DebitNotes: React.FC = () => {
   useEffect(() => {
     loadDebitNotes()
     // Update overdue status on mount
-    window.electronAPI.debitNotes.updateOverdue()
+    window.electronAPI?.debitNotes?.updateOverdue?.()
   }, [])
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export const DebitNotes: React.FC = () => {
   const loadDebitNotes = async () => {
     setLoading(true)
     try {
-      const data = await window.electronAPI.debitNotes.getAll()
+      const data = await window.electronAPI?.debitNotes?.getAll?.()
       setDebitNotes(data)
     } catch (error) {
       console.error('Failed to load debit notes:', error)
@@ -103,7 +103,7 @@ export const DebitNotes: React.FC = () => {
       const entries = await Promise.all(
         debitNotes.map(async (dn) => {
           try {
-            const detail = await window.electronAPI.debitNotes.getById(dn.id)
+            const detail = await window.electronAPI?.debitNotes?.getById?.(dn.id)
             return [dn.id, detail] as const
           } catch (error) {
             console.error(`Failed to load detail for debit note ${dn.id}:`, error)
@@ -129,7 +129,7 @@ export const DebitNotes: React.FC = () => {
     setCreating(true)
 
     try {
-      const result = await window.electronAPI.debitNotes.create({
+      const result = await window.electronAPI?.debitNotes?.create?.({
         periodStart: formData.periodStart,
         periodEnd: formData.periodEnd,
         dueDate: formData.dueDate,
@@ -137,7 +137,7 @@ export const DebitNotes: React.FC = () => {
       })
 
       if (result.success) {
-        await window.electronAPI.audit.log(currentUser!.id, 'DEBIT_NOTE_CREATED', {
+        await window.electronAPI?.audit?.log?.(currentUser!.id, 'DEBIT_NOTE_CREATED', {
           dnNumber: result.dnNumber,
           periodStart: formData.periodStart,
           periodEnd: formData.periodEnd,
@@ -191,12 +191,12 @@ export const DebitNotes: React.FC = () => {
         },
       }
 
-      const pdfPath = await window.electronAPI.pdf.generateDebitNote(pdfData)
+      const pdfPath = await window.electronAPI?.pdf?.generateDebitNote?.(pdfData)
 
       // Update debit note with PDF path
-      await window.electronAPI.debitNotes.update(dnId, { pdfPath })
+      await window.electronAPI?.debitNotes?.update?.(dnId, { pdfPath })
 
-      await window.electronAPI.audit.log(currentUser!.id, 'DEBIT_NOTE_PDF_GENERATED', {
+      await window.electronAPI?.audit?.log?.(currentUser!.id, 'DEBIT_NOTE_PDF_GENERATED', {
         dnNumber: dnData.dn_number,
       })
     } catch (error) {
@@ -208,10 +208,10 @@ export const DebitNotes: React.FC = () => {
     if (!confirm('Mark this debit note as paid?')) return
 
     try {
-      const result = await window.electronAPI.debitNotes.markPaid(id)
+      const result = await window.electronAPI?.debitNotes?.markPaid?.(id)
 
       if (result.success) {
-        await window.electronAPI.audit.log(currentUser!.id, 'DEBIT_NOTE_MARKED_PAID', {
+        await window.electronAPI?.audit?.log?.(currentUser!.id, 'DEBIT_NOTE_MARKED_PAID', {
           debitNoteId: id,
         })
         
@@ -224,7 +224,7 @@ export const DebitNotes: React.FC = () => {
 
   const viewDetail = async (id: number) => {
     try {
-      const data = await window.electronAPI.debitNotes.getById(id)
+      const data = await window.electronAPI?.debitNotes?.getById?.(id)
       setViewingDetail(data)
     } catch (error) {
       console.error('Failed to load detail:', error)

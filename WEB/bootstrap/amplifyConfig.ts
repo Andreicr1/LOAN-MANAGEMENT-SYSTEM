@@ -1,58 +1,40 @@
-import { Amplify, ResourcesConfig } from 'aws-amplify'
+import { Amplify } from 'aws-amplify'
 
-const awsRegion = import.meta.env.VITE_AWS_REGION
-const userPoolId = import.meta.env.VITE_COGNITO_USER_POOL_ID
-const userPoolClientId = import.meta.env.VITE_COGNITO_USER_POOL_CLIENT_ID
-const identityPoolId = import.meta.env.VITE_COGNITO_IDENTITY_POOL_ID
-const apiUrl = import.meta.env.VITE_AMPLIFY_API_URL
-const apiId = import.meta.env.VITE_AMPLIFY_API_ID
+const rawEnv = ((import.meta as any)?.env ?? {}) as Record<string, string | undefined>
 
-const config: ResourcesConfig = {
-  Auth: {
-    Cognito: {
-      region: awsRegion,
-      userPoolId,
-      userPoolClientId,
-      identityPoolId,
-      loginWith: {
-        username: true,
-        email: true,
-        phone: false
-      }
-    }
-  },
-  API: {
-    GraphQL: {
-      endpoint: apiUrl,
-      region: awsRegion,
-      defaultAuthMode: 'userPool'
-    }
-  },
-  Storage: {
-    S3: {
-      bucket: import.meta.env.VITE_AMPLIFY_STORAGE_BUCKET,
-      region: awsRegion,
-      dangerouslyConnectToHttpEndpointForTesting: import.meta.env.DEV ? true : undefined
-    }
-  }
+export const amplifyEnv = {
+  region: rawEnv.VITE_AMPLIFY_REGION,
+  userPoolId: rawEnv.VITE_AMPLIFY_USER_POOL_ID,
+  userPoolClientId: rawEnv.VITE_AMPLIFY_USER_POOL_CLIENT_ID,
+  identityPoolId: rawEnv.VITE_AMPLIFY_IDENTITY_POOL_ID,
+  apiUrl: rawEnv.VITE_AMPLIFY_API_URL,
 }
 
 export function configureAmplify() {
-  Amplify.configure(config, { ssr: false })
-}
+  const authConfig: any = {
+    Cognito: {
+      loginWith: { email: true },
+    },
+  }
 
-export type AmplifyEnv = {
-  region: string
-  apiUrl: string
-  apiId: string
-  storageBucket: string
-}
+  if (amplifyEnv.region) authConfig.Cognito.region = amplifyEnv.region
+  if (amplifyEnv.userPoolId) authConfig.Cognito.userPoolId = amplifyEnv.userPoolId
+  if (amplifyEnv.userPoolClientId) authConfig.Cognito.userPoolClientId = amplifyEnv.userPoolClientId
+  if (amplifyEnv.identityPoolId) authConfig.Cognito.identityPoolId = amplifyEnv.identityPoolId
 
-export const amplifyEnv: AmplifyEnv = {
-  region: awsRegion,
-  apiUrl,
-  apiId,
-  storageBucket: import.meta.env.VITE_AMPLIFY_STORAGE_BUCKET
+  const config: any = { Auth: authConfig }
+
+  if (amplifyEnv.apiUrl) {
+    config.API = {
+      REST: {
+        web: {
+          endpoint: amplifyEnv.apiUrl,
+        },
+      },
+    }
+  }
+
+  Amplify.configure(config)
 }
 
 

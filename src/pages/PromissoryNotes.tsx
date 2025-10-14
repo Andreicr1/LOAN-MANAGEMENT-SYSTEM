@@ -135,7 +135,7 @@ export const PromissoryNotes: React.FC = () => {
 
   const openPNDocument = async (pn: PromissoryNote) => {
     if (pn.generated_pn_path) {
-      await window.electronAPI.openPDF(pn.generated_pn_path)
+      await window.electronAPI.openPDF?.(pn.generated_pn_path)
     } else {
       alert('PDF not available for this Promissory Note')
     }
