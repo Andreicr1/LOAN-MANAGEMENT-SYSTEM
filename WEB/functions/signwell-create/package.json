@@ -1,0 +1,11 @@
+{
+  "name": "signwell-create",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.ts",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.609.0"
+  }
+}
+
+

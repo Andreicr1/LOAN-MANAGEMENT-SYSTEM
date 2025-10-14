@@ -1,0 +1,13 @@
+# Plano de migração para Web (AWS Amplify)
+- [x] Criar pasta WEB com bootstrap e polyfill `window.electronAPI`
+- [x] Modelar GraphQL em `amplify/data/resource.ts` e grupos Cognito
+- [x] Definir buckets S3 para PDFs/exports e permissões
+- [x] Implementar Lambdas: pdf, signwell, disbursement, reports
+- [x] Implementar Lambdas: email, bank-reconciliation, backup, webhook
+- [x] Registrar Functions, Storage e rotas em `amplify/backend.ts`
+- [x] Adicionar `src/main.web.tsx` e ajustar `vite.config.ts` para web
+- [x] Conectar adapter aos GraphQL/Lambdas e testar páginas
+- [x] Escrever e rodar `migrate-sqlite-to-amplify.ts`
+- [x] Configurar EventBridge: juros diários e backups
+- [x] Configurar Amplify Hosting com `WEB/amplify.yml`
+- [x] Testes unitários/integrados e smoke-test pós-deploy

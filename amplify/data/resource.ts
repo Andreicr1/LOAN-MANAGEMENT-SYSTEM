@@ -1,53 +1,96 @@
-import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
+import { type ClientSchema, a, defineData } from '@aws-amplify/backend'
 
-/*== STEP 1 ===============================================================
-The section below creates a Todo database table with a "content" field. Try
-adding a new "isDone" field as a boolean. The authorization rule below
-specifies that any unauthenticated user can "create", "read", "update", 
-and "delete" any "Todo" records.
-=========================================================================*/
+const userRoleEnum = a.enum(['ADMIN', 'MANAGER', 'VIEWER'])
+const disbursementStatusEnum = a.enum(['PENDING', 'APPROVED', 'CANCELLED', 'DISBURSED'])
+
 const schema = a.schema({
-  Todo: a
+  EmailConfig: a.customType({
+    host: a.string().optional(),
+    port: a.integer().optional(),
+    user: a.string().optional(),
+    passStored: a.boolean().optional()
+  }),
+  SignwellConfig: a.customType({
+    apiKeyStored: a.boolean().optional(),
+    webhookSecretStored: a.boolean().optional()
+  }),
+  Config: a
     .model({
-      content: a.string(),
+      masterSecretRequired: a.boolean().default(false),
+      email: a.ref('EmailConfig').optional(),
+      signwell: a.ref('SignwellConfig').optional()
     })
-    .authorization((allow) => [allow.guest()]),
-});
+    .identifier(['id'])
+    .authorization((allow) => [allow.groups(['admin']).to(['read', 'create', 'update'])]),
+  User: a
+    .model({
+      cognitoId: a.id(),
+      username: a.string().required(),
+      fullName: a.string().optional(),
+      email: a.email().optional(),
+      role: userRoleEnum
+    })
+    .authorization((allow) => [
+      allow.groups(['admin', 'manager']).to(['read']),
+      allow.owner({ ownerField: 'cognitoId' }).to(['read']),
+      allow.groups(['admin']).to(['create', 'update', 'delete'])
+    ]),
+  AuditLog: a
+    .model({
+      userId: a.id().optional(),
+      action: a.string(),
+      details: a.json().optional(),
+      timestamp: a.dateTime()
+    })
+    .authorization((allow) => [allow.groups(['admin', 'manager']).to(['read', 'create'])]),
+  Disbursement: a
+    .model({
+      clientId: a.id(),
+      amount: a.float(),
+      status: disbursementStatusEnum,
+      approvedBy: a.id().optional(),
+      approvedAt: a.dateTime().optional()
+    })
+    .secondaryIndexes((index) => [index('byStatus', ['status']).queryField('disbursementsByStatus')])
+    .authorization((allow) => [allow.groups(['admin', 'manager', 'viewer'])]),
+  PromissoryNote: a
+    .model({
+      disbursementId: a.id(),
+      pdfKey: a.string().optional(),
+      dueDate: a.date().optional(),
+      amount: a.float().optional()
+    })
+    .authorization((allow) => [allow.groups(['admin', 'manager', 'viewer'])]),
+  BankTransaction: a
+    .model({
+      reference: a.string(),
+      amount: a.float(),
+      transactionDate: a.date().optional(),
+      matchedDisbursementId: a.id().optional()
+    })
+    .authorization((allow) => [allow.groups(['admin', 'manager'])]),
+  InterestCalculation: a
+    .model({
+      disbursementId: a.id(),
+      interestAmount: a.float(),
+      calculationDate: a.date()
+    })
+    .authorization((allow) => [allow.groups(['admin', 'manager'])]),
+  DebitNote: a
+    .model({
+      disbursementId: a.id(),
+      amount: a.float(),
+      issuedAt: a.date().optional()
+    })
+    .authorization((allow) => [allow.groups(['admin', 'manager'])])
+})
 
-export type Schema = ClientSchema<typeof schema>;
+export type Schema = ClientSchema<typeof schema>
 
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: 'identityPool',
-  },
-});
-
-/*== STEP 2 ===============================================================
-Go to your frontend source code. From your client-side code, generate a
-Data client to make CRUDL requests to your table. (THIS SNIPPET WILL ONLY
-WORK IN THE FRONTEND CODE FILE.)
-
-Using JavaScript or Next.js React Server Components, Middleware, Server 
-Actions or Pages Router? Review how to generate Data clients for those use
-cases: https://docs.amplify.aws/gen2/build-a-backend/data/connect-to-API/
-=========================================================================*/
-
-/*
-"use client"
-import { generateClient } from "aws-amplify/data";
-import type { Schema } from "@/amplify/data/resource";
-
-const client = generateClient<Schema>() // use this Data client for CRUDL requests
-*/
-
-/*== STEP 3 ===============================================================
-Fetch records from the database and use them in your frontend component.
-(THIS SNIPPET WILL ONLY WORK IN THE FRONTEND CODE FILE.)
-=========================================================================*/
-
-/* For example, in a React component, you can use this snippet in your
-  function's RETURN statement */
-// const { data: todos } = await client.models.Todo.list()
-
-// return <ul>{todos.map(todo => <li key={todo.id}>{todo.content}</li>)}</ul>
+    defaultAuthorizationMode: 'userPool',
+    additionalAuthorizationModes: ['iam']
+  }
+})

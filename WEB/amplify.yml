@@ -1,0 +1,20 @@
+version: 1.0
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci
+        - npx amplify pull --appId $AMPLIFY_APP_ID --envName $AMPLIFY_ENV --yes
+        - npx amplify codegen
+    build:
+      commands:
+        - npm run build:web
+        - npm run test:web
+  artifacts:
+    baseDirectory: dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+

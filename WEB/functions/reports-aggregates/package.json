@@ -1,0 +1,12 @@
+{
+  "name": "reports-aggregates",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.ts",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.609.0",
+    "@aws-sdk/lib-dynamodb": "^3.609.0"
+  }
+}
+
+

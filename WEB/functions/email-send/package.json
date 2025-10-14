@@ -1,0 +1,11 @@
+{
+  "name": "email-send",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.ts",
+  "dependencies": {
+    "nodemailer": "^7.0.9"
+  }
+}
+
+

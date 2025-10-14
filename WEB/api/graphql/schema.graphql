@@ -1,0 +1,107 @@
+type Config @model @auth(rules: [{ allow: groups, groups: ["admin"] }]) {
+  id: ID!
+  masterSecretRequired: Boolean
+  email: EmailConfig
+  signwell: SignwellConfig
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
+type EmailConfig {
+  host: String
+  port: Int
+  user: String
+  passStored: Boolean
+}
+
+type SignwellConfig {
+  apiKeyStored: Boolean
+  webhookSecretStored: Boolean
+}
+
+type User @model @auth(rules: [
+  { allow: groups, groups: ["admin", "manager"], operations: [read] },
+  { allow: owner, ownerField: "cognitoId", operations: [read] },
+  { allow: groups, groups: ["admin"], operations: [create, update, delete] }
+]) {
+  id: ID!
+  cognitoId: ID!
+  username: String!
+  fullName: String
+  email: AWSEmail
+  role: UserRole!
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  VIEWER
+}
+
+type AuditLog @model @auth(rules: [{ allow: groups, groups: ["admin", "manager"], operations: [read, create] }]) {
+  id: ID!
+  userId: ID
+  action: String!
+  details: AWSJSON
+  timestamp: AWSDateTime!
+}
+
+type Disbursement @model @auth(rules: [{ allow: groups, groups: ["admin", "manager", "viewer"] }]) {
+  id: ID!
+  clientId: ID!
+  amount: Float!
+  status: DisbursementStatus!
+  approvedBy: ID
+  approvedAt: AWSDateTime
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
+enum DisbursementStatus {
+  PENDING
+  APPROVED
+  CANCELLED
+  DISBURSED
+}
+
+type PromissoryNote @model @auth(rules: [{ allow: groups, groups: ["admin", "manager", "viewer"] }]) {
+  id: ID!
+  disbursementId: ID!
+  pdfKey: String
+  dueDate: AWSDate
+  amount: Float
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
+type BankTransaction @model @auth(rules: [{ allow: groups, groups: ["admin", "manager"] }]) {
+  id: ID!
+  reference: String!
+  amount: Float!
+  transactionDate: AWSDate
+  matchedDisbursementId: ID
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
+type InterestCalculation @model @auth(rules: [{ allow: groups, groups: ["admin", "manager"] }]) {
+  id: ID!
+  disbursementId: ID!
+  interestAmount: Float!
+  calculationDate: AWSDate!
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
+type DebitNote @model @auth(rules: [{ allow: groups, groups: ["admin", "manager"] }]) {
+  id: ID!
+  disbursementId: ID!
+  amount: Float!
+  issuedAt: AWSDate
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
+
