@@ -3,6 +3,11 @@
     "target": "es2022",
     "module": "es2022",
     "moduleResolution": "bundler",
+    "types": ["node"],
+    "typeRoots": [
+      "../node_modules/@types",
+      "./node_modules/@types"
+    ],
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
