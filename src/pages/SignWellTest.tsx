@@ -20,6 +20,14 @@ export const SignWellTest: React.FC = () => {
     setLoading(true);
     setMessage(null);
 
+    if (!window.electronAPI?.signwell?.createDocument) {
+      setMessage({
+        type: "error",
+        text: "SignWell não está disponível no modo web. Utilize a versão desktop enquanto os endpoints não são implementados.",
+      })
+      return
+    }
+
     try {
       // For testing, we'll use a sample PDF path
       // In production, this would come from the actual generated Promissory Note
@@ -75,6 +83,11 @@ export const SignWellTest: React.FC = () => {
     setMessage(null);
 
     try {
+      if (!window.electronAPI?.signwell?.getEmbeddedRequestingUrl) {
+        setMessage({ type: "error", text: "Endpoint de embed não disponível no modo web." })
+        return
+      }
+
       const result = await window.electronAPI.signwell.getEmbeddedRequestingUrl(targetDocId);
 
       if (result.success && result.url) {
@@ -111,6 +124,11 @@ export const SignWellTest: React.FC = () => {
 
     setLoading(true);
     setMessage(null);
+
+    if (!window.electronAPI?.signwell?.updateAndSend) {
+      setMessage({ type: "error", text: "Envio para assinatura indisponível no modo web." })
+      return
+    }
 
     try {
       const result = await window.electronAPI.signwell.updateAndSend({

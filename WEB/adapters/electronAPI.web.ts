@@ -139,7 +139,11 @@ export function createElectronApiAdapter(): ElectronApi {
     },
     audit: {
       async log(userId, action, details) {
-        console.info('[audit]', action, { userId, details })
+        try {
+          await post('/audit/log', { userId, action, details })
+        } catch (error) {
+          console.warn('Audit log stub failed:', error)
+        }
       },
       async getAll() {
         return []
@@ -213,14 +217,14 @@ export function createElectronApiAdapter(): ElectronApi {
       },
     },
     signwell: {
-      createDocument(payload) {
-        return post('/signwell/create', payload)
+      async createDocument(payload) {
+        throw new Error('SignWell createDocument não está disponível no modo web')
       },
-      getEmbeddedRequestingUrl(documentId) {
-        return post('/signwell/embedded-url', { documentId })
+      async getEmbeddedRequestingUrl(documentId) {
+        throw new Error('SignWell getEmbeddedRequestingUrl não está disponível no modo web')
       },
-      updateAndSend(payload) {
-        return post('/signwell/update-send', payload)
+      async updateAndSend(payload) {
+        throw new Error('SignWell updateAndSend não está disponível no modo web')
       },
     },
     pdf: {

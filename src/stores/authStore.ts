@@ -22,6 +22,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
       login: async (username: string, password: string) => {
         try {
+          if (!window.electronAPI?.auth?.login) {
+            return { success: false, error: 'Electron API not available. Please restart the application.' }
+          }
+
           const result = await window.electronAPI.auth.login(username, password)
           
           if (result.success && result.user) {
@@ -37,7 +41,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
             })
             
             // Log audit
-            await window.electronAPI.audit.log(result.user.id, 'USER_LOGIN', {
+            await window.electronAPI.audit?.log?.(result.user.id, 'USER_LOGIN', {
               username: result.user.username
             })
             
@@ -54,8 +58,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       logout: () => {
         const user = get().user
         if (user) {
-          window.electronAPI.auth.logout(user.id)
-          window.electronAPI.audit.log(user.id, 'USER_LOGOUT', {
+          window.electronAPI?.auth?.logout?.(user.id)
+          window.electronAPI?.audit?.log?.(user.id, 'USER_LOGOUT', {
             username: user.username
           })
         }

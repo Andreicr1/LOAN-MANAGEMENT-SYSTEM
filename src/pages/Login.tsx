@@ -26,7 +26,7 @@ export const Login: React.FC = () => {
     }
 
     // Check if electronAPI is available
-    if (!window.electronAPI) {
+    if (!window.electronAPI?.auth?.login) {
       setError(t.login.errors.apiNotAvailable)
       console.error('window.electronAPI is undefined')
       return

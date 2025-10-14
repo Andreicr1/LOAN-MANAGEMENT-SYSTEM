@@ -58,6 +58,11 @@ export const DisbursementDetail: React.FC = () => {
 
   const loadData = async () => {
     setLoading(true);
+    if (!window.electronAPI?.signwell?.createDocument) {
+      alert('SignWell ainda não está disponível na versão web. Esta ação precisa ser executada pela versão desktop até que os endpoints estejam prontos.');
+      return;
+    }
+
     try {
       const [disbData, pnData, configData] = await Promise.all([
         window.electronAPI.disbursements.getById(parseInt(id!)),
@@ -485,14 +490,18 @@ export const DisbursementDetail: React.FC = () => {
         });
 
         // Open SignWell editor in new window
-        const openResult = await window.electronAPI.signwell.openEmbeddedRequesting(
-          result.documentId,
-          `Promissory Note ${pnNumber}`
-        );
+        if (window.electronAPI.signwell.openEmbeddedRequesting) {
+          const openResult = await window.electronAPI.signwell.openEmbeddedRequesting(
+            result.documentId,
+            `Promissory Note ${pnNumber}`
+          );
 
-        if (!openResult.success) {
-          alert(`Failed to open SignWell editor:\n\n${openResult.error}`);
-          return;
+          if (!openResult.success) {
+            alert(`Failed to open SignWell editor:\n\n${openResult.error}`);
+            return;
+          }
+        } else {
+          alert('Documento criado, mas abertura do editor não é suportada no modo web. Continue o fluxo pela versão desktop.');
         }
 
         await window.electronAPI.audit.log(
@@ -523,6 +532,11 @@ export const DisbursementDetail: React.FC = () => {
     setSendingToSignWell(true);
 
     try {
+      if (!window.electronAPI?.signwell?.createDocument) {
+        alert('SignWell ainda não está disponível na versão web. Esta ação precisa ser executada pela versão desktop até que os endpoints estejam prontos.');
+        return;
+      }
+
       const lenderSignatories = config.lenderSignatories || [];
       const recipients = lenderSignatories.length > 0
         ? lenderSignatories.map((s: any) => ({ name: s.name, email: s.email }))
@@ -546,14 +560,18 @@ export const DisbursementDetail: React.FC = () => {
         });
 
         // Open SignWell editor in new window
-        const openResult = await window.electronAPI.signwell.openEmbeddedRequesting(
-          result.documentId,
-          `Wire Transfer Order - ${disbursement.requestNumber}`
-        );
+        if (window.electronAPI.signwell.openEmbeddedRequesting) {
+          const openResult = await window.electronAPI.signwell.openEmbeddedRequesting(
+            result.documentId,
+            `Wire Transfer Order - ${disbursement.requestNumber}`
+          );
 
-        if (!openResult.success) {
-          alert(`Failed to open SignWell editor:\n\n${openResult.error}`);
-          return;
+          if (!openResult.success) {
+            alert(`Failed to open SignWell editor:\n\n${openResult.error}`);
+            return;
+          }
+        } else {
+          alert('Documento criado, mas abertura do editor não é suportada no modo web. Continue o fluxo pela versão desktop.');
         }
 
         await window.electronAPI.audit.log(
