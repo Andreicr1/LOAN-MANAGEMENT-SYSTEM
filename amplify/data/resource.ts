@@ -5,42 +5,40 @@ const disbursementStatusEnum = a.enum(['PENDING', 'APPROVED', 'CANCELLED', 'DISB
 
 const schema = a.schema({
   EmailConfig: a.customType({
-    host: a.string().optional(),
-    port: a.integer().optional(),
-    user: a.string().optional(),
-    passStored: a.boolean().optional()
+    host: a.string(),
+    port: a.integer(),
+    user: a.string(),
+    passStored: a.boolean()
   }),
   SignwellConfig: a.customType({
-    apiKeyStored: a.boolean().optional(),
-    webhookSecretStored: a.boolean().optional()
+    apiKeyStored: a.boolean(),
+    webhookSecretStored: a.boolean()
   }),
   Config: a
     .model({
       masterSecretRequired: a.boolean().default(false),
-      email: a.ref('EmailConfig').optional(),
-      signwell: a.ref('SignwellConfig').optional()
+      email: a.ref('EmailConfig'),
+      signwell: a.ref('SignwellConfig')
     })
-    .identifier(['id'])
     .authorization((allow) => [allow.groups(['admin']).to(['read', 'create', 'update'])]),
   User: a
     .model({
       cognitoId: a.id(),
-      username: a.string().required(),
-      fullName: a.string().optional(),
-      email: a.email().optional(),
+      username: a.string(),
+      fullName: a.string(),
+      email: a.email(),
       role: userRoleEnum
     })
     .authorization((allow) => [
-      allow.groups(['admin', 'manager']).to(['read']),
-      allow.owner({ ownerField: 'cognitoId' }).to(['read']),
-      allow.groups(['admin']).to(['create', 'update', 'delete'])
+      allow.groups(['admin']).to(['read', 'create', 'update', 'delete']),
+      allow.groups(['manager']).to(['read'])
     ]),
   AuditLog: a
     .model({
-      userId: a.id().optional(),
+      userId: a.id(),
       action: a.string(),
-      details: a.json().optional(),
-      timestamp: a.dateTime()
+      details: a.json(),
+      timestamp: a.datetime()
     })
     .authorization((allow) => [allow.groups(['admin', 'manager']).to(['read', 'create'])]),
   Disbursement: a
@@ -48,25 +46,25 @@ const schema = a.schema({
       clientId: a.id(),
       amount: a.float(),
       status: disbursementStatusEnum,
-      approvedBy: a.id().optional(),
-      approvedAt: a.dateTime().optional()
+      approvedBy: a.id(),
+      approvedAt: a.datetime()
     })
-    .secondaryIndexes((index) => [index('byStatus', ['status']).queryField('disbursementsByStatus')])
+    .secondaryIndexes((index) => [index('status')])
     .authorization((allow) => [allow.groups(['admin', 'manager', 'viewer'])]),
   PromissoryNote: a
     .model({
       disbursementId: a.id(),
-      pdfKey: a.string().optional(),
-      dueDate: a.date().optional(),
-      amount: a.float().optional()
+      pdfKey: a.string(),
+      dueDate: a.date(),
+      amount: a.float()
     })
     .authorization((allow) => [allow.groups(['admin', 'manager', 'viewer'])]),
   BankTransaction: a
     .model({
       reference: a.string(),
       amount: a.float(),
-      transactionDate: a.date().optional(),
-      matchedDisbursementId: a.id().optional()
+      transactionDate: a.date(),
+      matchedDisbursementId: a.id()
     })
     .authorization((allow) => [allow.groups(['admin', 'manager'])]),
   InterestCalculation: a
@@ -80,7 +78,7 @@ const schema = a.schema({
     .model({
       disbursementId: a.id(),
       amount: a.float(),
-      issuedAt: a.date().optional()
+      issuedAt: a.date()
     })
     .authorization((allow) => [allow.groups(['admin', 'manager'])])
 })
@@ -90,7 +88,6 @@ export type Schema = ClientSchema<typeof schema>
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: 'userPool',
-    additionalAuthorizationModes: ['iam']
+    defaultAuthorizationMode: 'userPool'
   }
 })

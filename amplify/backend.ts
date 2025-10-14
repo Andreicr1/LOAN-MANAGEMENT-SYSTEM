@@ -1,6 +1,8 @@
-import { defineBackend, defineFunction, defineHttpEndpoint } from '@aws-amplify/backend'
+import { defineBackend, defineFunction, secret } from '@aws-amplify/backend'
 import { auth } from './auth/resource'
 import { data } from './data/resource'
+import { aws_apigatewayv2 as apigwv2 } from 'aws-cdk-lib'
+import { aws_apigatewayv2_integrations as apigwv2i } from 'aws-cdk-lib'
 
 const pdfGenerate = defineFunction({
   name: 'pdf-generate',
@@ -93,62 +95,150 @@ const backupRestoreFn = defineFunction({ name: 'backup-restore-fn', entry: '../W
 const disbursementsCancel = defineFunction({ name: 'disbursements-cancel', entry: '../WEB/functions/disbursements/cancel/index.ts' })
 const disbursementsGetAll = defineFunction({ name: 'disbursements-get-all', entry: '../WEB/functions/disbursements/get-all/index.ts' })
 
-const api = defineHttpEndpoint({
-  name: 'web-api',
-  routes: [
-    { path: '/auth/login', method: 'POST', function: authLogin },
-    { path: '/auth/logout', method: 'POST', function: authLogout },
-
-    { path: '/users/list', method: 'GET', function: usersList },
-    { path: '/users/create', method: 'POST', function: usersCreate },
-    { path: '/users/update', method: 'POST', function: usersUpdate },
-    { path: '/users/delete', method: 'POST', function: usersDelete },
-    { path: '/users/reset-password', method: 'POST', function: usersResetPassword },
-
-    { path: '/config/get', method: 'GET', function: configGet },
-    { path: '/config/update', method: 'POST', function: configUpdate },
-    { path: '/config/unlock', method: 'POST', function: configUnlock },
-
-    { path: '/backup/list', method: 'GET', function: backupListFn },
-    { path: '/backup/create', method: 'POST', function: backupCreateFn },
-    { path: '/backup/restore', method: 'POST', function: backupRestoreFn },
-
-    { path: '/disbursements/get-all', method: 'GET', function: disbursementsGetAll },
-    { path: '/disbursements/approve', method: 'POST', function: disbursementApprove },
-    { path: '/disbursements/cancel', method: 'POST', function: disbursementsCancel },
-
-    { path: '/reports/dashboard-kpis', method: 'POST', function: reportsAggregates },
-    { path: '/reports/aging', method: 'POST', function: reportsAggregates },
-    { path: '/reports/period', method: 'POST', function: reportsAggregates },
-    { path: '/reports/acquired-assets', method: 'POST', function: reportsAggregates },
-
-    { path: '/signwell/create', method: 'POST', function: signwellCreate },
-    { path: '/signwell/embedded-url', method: 'POST', function: signwellEmbeddedUrl },
-    { path: '/signwell/update-send', method: 'POST', function: signwellUpdateSend }
-  ]
-})
-
-defineBackend({
+const backend = defineBackend({
   auth,
   data,
-  storage: {
-    buckets: {
-      pdfDocuments: {
-        name: 'loan-management-pdf-documents',
-        access: 'authAndFunctions',
-        lifecycleRules: [{ id: 'expire-signed', enabled: true, expiration: 365 }]
-      },
-      exports: {
-        name: 'loan-management-exports',
-        access: 'functions',
-        lifecycleRules: [{ id: 'expire-exports', enabled: true, expiration: 60 }]
-      },
-      uploads: {
-        name: 'loan-management-uploads',
-        access: 'functions',
-        lifecycleRules: [{ id: 'expire-temp', enabled: true, expiration: 14 }]
-      }
-    }
-  },
-  api
+  pdfGenerate,
+  pdfParse,
+  pdfSignatureValidate,
+  emailSend,
+  disbursementApprove,
+  reportsAggregates,
+  bankReconciliation,
+  backupExport,
+  backupRestore,
+  signwellCreate,
+  signwellEmbeddedUrl,
+  signwellUpdateSend,
+  signwellWebhook,
+  interestDaily,
+  authLogin,
+  authLogout,
+  usersList,
+  usersCreate,
+  usersUpdate,
+  usersDelete,
+  usersResetPassword,
+  configGet,
+  configUpdate,
+  configUnlock,
+  backupListFn,
+  backupCreateFn,
+  backupRestoreFn,
+  disbursementsCancel,
+  disbursementsGetAll
 })
+
+// Create HttpApi and add routes using CDK
+const apiStack = backend.createStack('web-api')
+const httpApi = new apigwv2.HttpApi(apiStack, 'WebApi', {
+  corsPreflight: {
+    allowOrigins: ['*'],
+    allowMethods: [apigwv2.CorsHttpMethod.GET, apigwv2.CorsHttpMethod.POST, apigwv2.CorsHttpMethod.OPTIONS],
+    allowHeaders: ['*']
+  }
+})
+
+const addRoute = (method: apigwv2.HttpMethod, path: string, name: string, lambda: any) => {
+  const integration = new apigwv2i.HttpLambdaIntegration(`${name}Integration`, lambda)
+  httpApi.addRoutes({ path, methods: [method], integration })
+}
+
+// Auth
+addRoute(apigwv2.HttpMethod.POST, '/auth/login', 'AuthLogin', backend.authLogin.resources.lambda)
+addRoute(apigwv2.HttpMethod.POST, '/auth/logout', 'AuthLogout', backend.authLogout.resources.lambda)
+
+// Users
+addRoute(apigwv2.HttpMethod.GET, '/users/list', 'UsersList', backend.usersList.resources.lambda)
+addRoute(apigwv2.HttpMethod.POST, '/users/create', 'UsersCreate', backend.usersCreate.resources.lambda)
+addRoute(apigwv2.HttpMethod.POST, '/users/update', 'UsersUpdate', backend.usersUpdate.resources.lambda)
+addRoute(apigwv2.HttpMethod.POST, '/users/delete', 'UsersDelete', backend.usersDelete.resources.lambda)
+addRoute(apigwv2.HttpMethod.POST, '/users/reset-password', 'UsersResetPassword', backend.usersResetPassword.resources.lambda)
+
+// Config
+addRoute(apigwv2.HttpMethod.GET, '/config/get', 'ConfigGet', backend.configGet.resources.lambda)
+addRoute(apigwv2.HttpMethod.POST, '/config/update', 'ConfigUpdate', backend.configUpdate.resources.lambda)
+addRoute(apigwv2.HttpMethod.POST, '/config/unlock', 'ConfigUnlock', backend.configUnlock.resources.lambda)
+
+// Backup
+addRoute(apigwv2.HttpMethod.GET, '/backup/list', 'BackupList', backend.backupListFn.resources.lambda)
+addRoute(apigwv2.HttpMethod.POST, '/backup/create', 'BackupCreate', backend.backupCreateFn.resources.lambda)
+addRoute(apigwv2.HttpMethod.POST, '/backup/restore', 'BackupRestore', backend.backupRestoreFn.resources.lambda)
+
+// Disbursements
+addRoute(apigwv2.HttpMethod.GET, '/disbursements/get-all', 'DisbursementsGetAll', backend.disbursementsGetAll.resources.lambda)
+addRoute(apigwv2.HttpMethod.POST, '/disbursements/approve', 'DisbursementApprove', backend.disbursementApprove.resources.lambda)
+addRoute(apigwv2.HttpMethod.POST, '/disbursements/cancel', 'DisbursementsCancel', backend.disbursementsCancel.resources.lambda)
+
+// Reports
+addRoute(apigwv2.HttpMethod.POST, '/reports/dashboard-kpis', 'ReportsDashboardKpis', backend.reportsAggregates.resources.lambda)
+addRoute(apigwv2.HttpMethod.POST, '/reports/aging', 'ReportsAging', backend.reportsAggregates.resources.lambda)
+addRoute(apigwv2.HttpMethod.POST, '/reports/period', 'ReportsPeriod', backend.reportsAggregates.resources.lambda)
+addRoute(apigwv2.HttpMethod.POST, '/reports/acquired-assets', 'ReportsAcquiredAssets', backend.reportsAggregates.resources.lambda)
+
+// Signwell
+addRoute(apigwv2.HttpMethod.POST, '/signwell/create', 'SignwellCreate', backend.signwellCreate.resources.lambda)
+addRoute(apigwv2.HttpMethod.POST, '/signwell/embedded-url', 'SignwellEmbeddedUrl', backend.signwellEmbeddedUrl.resources.lambda)
+
+addRoute(apigwv2.HttpMethod.POST, '/signwell/update-send', 'SignwellUpdateSend', backend.signwellUpdateSend.resources.lambda)
+
+// Dynamic environment variables wired from generated resources
+const tables = Object.values(backend.data.resources.tables)
+const mainTable = tables.length > 0 ? tables[0] : undefined
+if (mainTable) {
+  const setTableEnv = (fn: any) => fn.addEnvironment('DATA_TABLE_NAME', mainTable.tableName)
+  ;[
+    backend.disbursementApprove,
+    backend.reportsAggregates,
+    backend.backupCreateFn,
+    backend.backupRestoreFn,
+    backend.configGet,
+    backend.configUpdate,
+    backend.bankReconciliation,
+    backend.interestDaily,
+    backend.disbursementsGetAll,
+    backend.disbursementsCancel,
+    backend.usersList,
+    backend.usersCreate,
+    backend.usersUpdate,
+    backend.usersDelete,
+    backend.usersResetPassword,
+    backend.signwellWebhook
+  ].forEach(setTableEnv)
+}
+
+// Cognito resource-derived environment
+const userPoolId = backend.auth.resources.userPool.userPoolId
+const userPoolClientId = backend.auth.resources.userPoolClient.userPoolClientId
+;[
+  backend.usersList,
+  backend.usersCreate,
+  backend.usersUpdate,
+  backend.usersDelete,
+  backend.usersResetPassword
+].forEach((fn) => fn.addEnvironment('COGNITO_USER_POOL_ID', userPoolId))
+backend.authLogin.addEnvironment('COGNITO_CLIENT_ID', userPoolClientId)
+backend.authLogin.addEnvironment('COGNITO_CLIENT_SECRET', secret('COGNITO_CLIENT_SECRET'))
+
+// Static env and secrets by function
+backend.pdfGenerate.addEnvironment('PDF_BUCKET', secret('PDF_BUCKET'))
+backend.pdfParse.addEnvironment('UPLOAD_BUCKET', secret('UPLOAD_BUCKET'))
+backend.pdfSignatureValidate.addEnvironment('UPLOAD_BUCKET', secret('UPLOAD_BUCKET'))
+backend.bankReconciliation.addEnvironment('UPLOAD_BUCKET', secret('UPLOAD_BUCKET'))
+backend.signwellCreate.addEnvironment('SIGNWELL_API_KEY', secret('SIGNWELL_API_KEY'))
+backend.signwellCreate.addEnvironment('PDF_BUCKET', secret('PDF_BUCKET'))
+backend.signwellCreate.addEnvironment('SIGNWELL_TEST_MODE', 'false')
+backend.signwellEmbeddedUrl.addEnvironment('SIGNWELL_API_KEY', secret('SIGNWELL_API_KEY'))
+backend.signwellUpdateSend.addEnvironment('SIGNWELL_API_KEY', secret('SIGNWELL_API_KEY'))
+backend.signwellWebhook.addEnvironment('SIGNWELL_WEBHOOK_SECRET', secret('SIGNWELL_WEBHOOK_SECRET'))
+backend.signwellWebhook.addEnvironment('SIGNWELL_API_KEY', secret('SIGNWELL_API_KEY'))
+backend.signwellWebhook.addEnvironment('PDF_BUCKET', secret('PDF_BUCKET'))
+backend.backupListFn.addEnvironment('EXPORT_BUCKET', secret('EXPORT_BUCKET'))
+backend.backupCreateFn.addEnvironment('EXPORT_BUCKET', secret('EXPORT_BUCKET'))
+backend.backupRestoreFn.addEnvironment('EXPORT_BUCKET', secret('EXPORT_BUCKET'))
+
+// Expose HttpApi endpoint in amplify outputs
+backend.addOutput({ custom: { httpApiUrl: httpApi.apiEndpoint } })
+
+// Buckets placeholder
+

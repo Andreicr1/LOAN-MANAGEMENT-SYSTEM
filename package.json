@@ -21,7 +21,9 @@
     "forge:build": "npm run build && npm run forge:compile && npm run forge:make",
     "forge:compile": "npx tsc electron/main.ts electron/preload.ts --outDir dist-electron --module commonjs --target es2019 --esModuleInterop --skipLibCheck",
     "check:types": "tsc --noEmit",
-    "test:web": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config WEB/jest.config.cjs"
+    "test:web": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config WEB/jest.config.cjs",
+    "deploy:backend": "npx ampx pipeline-deploy --app-id $AMPLIFY_APP_ID --branch $BRANCH_NAME",
+    "deploy:backend:win": "npx ampx pipeline-deploy --app-id %AMPLIFY_APP_ID% --branch %BRANCH_NAME%"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.908.0",
@@ -53,7 +55,10 @@
   },
   "devDependencies": {
     "@aws-amplify/backend": "^1.16.1",
+    "@aws-amplify/backend-auth": "^1.7.1",
     "@aws-amplify/backend-cli": "^1.8.0",
+    "@aws-amplify/backend-data": "^1.6.1",
+    "@aws-amplify/data-schema": "^1.21.1",
     "@electron-forge/cli": "^7.10.2",
     "@electron-forge/maker-squirrel": "^7.10.2",
     "@electron-forge/maker-zip": "^7.10.2",
