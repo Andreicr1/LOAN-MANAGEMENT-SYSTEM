@@ -70,3 +70,8 @@ ENV/
 $RECYCLE.BIN/
 ehthumbs.db
 Desktop.ini
+
+# amplify
+.amplify
+amplify_outputs*
+amplifyconfiguration*
