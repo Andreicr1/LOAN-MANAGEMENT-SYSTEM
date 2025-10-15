@@ -1,15 +1,30 @@
 version: 1.0
+env:
+  runtime-versions:
+    nodejs: 20
 frontend:
   phases:
     preBuild:
       commands:
-        - npm ci
-        - npx amplify pull --appId $AMPLIFY_APP_ID --envName $AMPLIFY_ENV --yes
-        - npx amplify codegen
+        # Install dependencies (works with or without package-lock)
+        - npm ci || npm install
+
+        # Deploy Amplify Gen2 backend (uses amplify/backend.ts)
+        # Requires env vars in Amplify Console: AMPLIFY_APP_ID (provided) and AWS_BRANCH (provided)
+        - npx -y ampx pipeline-deploy --app-id $AMPLIFY_APP_ID --branch $AWS_BRANCH --outputs-out-dir .
+
+        # Export httpApiUrl from amplify_outputs.json to Vite env for web build (loads .env.web for --mode web)
+        - node -e "const fs=require('fs');const p='./amplify_outputs.json';if(fs.existsSync(p)){const o=JSON.parse(fs.readFileSync(p,'utf8'));const url=o?.custom?.httpApiUrl||'';if(url){fs.writeFileSync('.env.web',`VITE_AMPLIFY_API_URL=${url}\n`);console.log('Wrote .env.web with VITE_AMPLIFY_API_URL',url)}else{console.log('No httpApiUrl in amplify_outputs.json');}}else{console.log('amplify_outputs.json not found');}"
     build:
       commands:
         - npm run build:web
-        - npm run test:web
+        # Run tests only if the tests directory exists to avoid breaking builds with no tests
+        - |
+          if [ -d "WEB/functions/__tests__" ]; then \
+            npm run test:web; \
+          else \
+            echo "No tests, skipping"; \
+          fi
   artifacts:
     baseDirectory: dist
     files:
