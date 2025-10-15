@@ -1,8 +1,9 @@
-import sqlite3 from 'sqlite3'
+import * as sqlite3 from 'sqlite3'
 import { open } from 'sqlite'
 import { Amplify } from 'aws-amplify'
 import { signIn, fetchAuthSession } from 'aws-amplify/auth'
 import { generateClient } from 'aws-amplify/data'
+import amplifyOutputs from '../../amplify_outputs.json'
 
 type Options = {
   sqlitePath: string
@@ -16,29 +17,13 @@ type Options = {
 }
 
 async function migrate(options: Options) {
-  Amplify.configure({
-    Auth: {
-      Cognito: {
-        region: options.region,
-        userPoolId: options.userPoolId,
-        userPoolClientId: options.userPoolClientId,
-        identityPoolId: options.identityPoolId,
-        loginWith: { username: true, email: true }
-      }
-    },
-    API: {
-      GraphQL: {
-        endpoint: options.graphQlUrl,
-        region: options.region,
-        defaultAuthMode: 'userPool'
-      }
-    }
-  })
+  // Configure Amplify with amplify_outputs.json
+  Amplify.configure(amplifyOutputs)
 
   await signIn({ username: options.username, password: options.password })
   await fetchAuthSession()
 
-  const client = generateClient({ authMode: 'userPool' })
+  const client = generateClient({ authMode: 'userPool' }) as any
 
   const db = await open({ filename: options.sqlitePath, driver: sqlite3.Database })
   const users = await db.all('SELECT * FROM users')
