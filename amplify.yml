@@ -1,22 +1,29 @@
-version: 1.0
+"
+version: 1
 env:
+  variables:
+    NODE_ENV: production
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
   runtime-versions:
     nodejs: 20
+
+backend:
+  phases:
+    build:
+      commands:
+        - echo "Backend build started"
+        - npm ci
+        - npm run build
+
 frontend:
   phases:
     preBuild:
       commands:
-
-        - nvm install 20 && nvm use 20 && node -v && npm -v      
-        # Install dependencies (works with or without package-lock)
-        - npm ci || npm install
-
-        # Note: Amplify Gen2 automatically deploys backend resources defined in amplify/backend.ts
-        # No manual deployment command needed here
-        # Export httpApiUrl from amplify_outputs.json to Vite env for web build (loads .env.web for --mode web)
-        - node -e "const fs=require('fs');const p='./amplify_outputs.json';if(fs.existsSync(p)){const o=JSON.parse(fs.readFileSync(p,'utf8'));const url=o?.custom?.httpApiUrl||'';if(url){fs.writeFileSync('.env.web',`VITE_AMPLIFY_API_URL=${url}\n`);console.log('Wrote .env.web with VITE_AMPLIFY_API_URL',url)}else{console.log('No httpApiUrl in amplify_outputs.json');}}else{console.log('amplify_outputs.json not found');}"
+        - echo "Frontend pre-build started"
+        - npm ci
     build:
       commands:
+        - echo "Frontend build started"
         - npm run build:web
   artifacts:
     baseDirectory: dist
@@ -25,4 +32,4 @@ frontend:
   cache:
     paths:
       - node_modules/**/*
-
+"
