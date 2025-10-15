@@ -181,6 +181,7 @@ addRoute(apigwv2.HttpMethod.POST, '/signwell/create', 'SignwellCreate', backend.
 addRoute(apigwv2.HttpMethod.POST, '/signwell/embedded-url', 'SignwellEmbeddedUrl', backend.signwellEmbeddedUrl.resources.lambda)
 
 addRoute(apigwv2.HttpMethod.POST, '/signwell/update-send', 'SignwellUpdateSend', backend.signwellUpdateSend.resources.lambda)
+addRoute(apigwv2.HttpMethod.POST, '/signwell/webhook', 'SignwellWebhook', backend.signwellWebhook.resources.lambda)
 
 // Dynamic environment variables wired from generated resources
 const tables = Object.values(backend.data.resources.tables)
@@ -233,6 +234,8 @@ backend.signwellUpdateSend.addEnvironment('SIGNWELL_API_KEY', secret('SIGNWELL_A
 backend.signwellWebhook.addEnvironment('SIGNWELL_WEBHOOK_SECRET', secret('SIGNWELL_WEBHOOK_SECRET'))
 backend.signwellWebhook.addEnvironment('SIGNWELL_API_KEY', secret('SIGNWELL_API_KEY'))
 backend.signwellWebhook.addEnvironment('PDF_BUCKET', secret('PDF_BUCKET'))
+backend.signwellWebhook.addEnvironment('WEBHOOK_TOKEN', secret('WEBHOOK_TOKEN'))
+backend.signwellWebhook.addEnvironment('ALLOW_UNVERIFIED_WEBHOOKS', 'false')
 backend.backupListFn.addEnvironment('EXPORT_BUCKET', secret('EXPORT_BUCKET'))
 backend.backupCreateFn.addEnvironment('EXPORT_BUCKET', secret('EXPORT_BUCKET'))
 backend.backupRestoreFn.addEnvironment('EXPORT_BUCKET', secret('EXPORT_BUCKET'))

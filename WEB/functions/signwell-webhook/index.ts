@@ -30,6 +30,8 @@ const resolveEnv = (keys: string[]) => keys.map((key) => process.env[key]).find(
 const tableName = resolveEnv(['DATA_TABLE_NAME', 'AMPLIFY_DATA_TABLE_NAME'])
 const bucket = resolveEnv(['PDF_BUCKET', 'S3_PDF_BUCKET'])
 const webhookSecret = resolveEnv(['SIGNWELL_WEBHOOK_SECRET'])
+const staticToken = resolveEnv(['WEBHOOK_TOKEN'])
+const allowUnverified = process.env.ALLOW_UNVERIFIED_WEBHOOKS === 'true'
 const apiKey = resolveEnv(['SIGNWELL_API_KEY'])
 
 const verifySignature = (payload: string, signature: string | undefined, secret: string) => {
@@ -39,12 +41,18 @@ const verifySignature = (payload: string, signature: string | undefined, secret:
 }
 
 export const handler = async (event: Event) => {
-  if (!webhookSecret) {
-    return { statusCode: 500, body: 'Webhook secret not configured' }
-  }
+  const headers = Object.fromEntries(
+    Object.entries(event.headers || {}).map(([k, v]) => [k.toLowerCase(), v])
+  ) as Record<string, string | undefined>
 
-  if (!verifySignature(event.body, event.headers['x-signwell-signature'], webhookSecret)) {
-    return { statusCode: 401, body: 'Invalid signature' }
+  const signature = headers['x-signwell-signature']
+  const tokenFromHeader = headers['x-webhook-token']
+
+  const hasHmac = !!(webhookSecret && verifySignature(event.body, signature, webhookSecret))
+  const hasStaticToken = !!(staticToken && tokenFromHeader && tokenFromHeader === staticToken)
+
+  if (!hasHmac && !hasStaticToken && !allowUnverified) {
+    return { statusCode: 401, body: 'Unauthorized webhook' }
   }
 
   const payload = JSON.parse(event.body) as SignwellPayload
@@ -110,4 +118,3 @@ export const handler = async (event: Event) => {
 
   return { statusCode: 200, body: 'ok' }
 }
-
